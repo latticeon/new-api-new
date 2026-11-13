@@ -75,8 +75,11 @@ func replyEndpoint(format types.RelayFormat, mode int, path string) bool {
 // does nothing.
 func Reply(c *gin.Context, format types.RelayFormat, info *relaycommon.RelayInfo) func() {
 	plan := planOf(c)
-	if plan == nil || info == nil {
+	if info == nil {
 		return func() {}
+	}
+	if plan == nil {
+		return relaycommon.ResponseIdentityBoundary(c, format, info.OriginModelName)
 	}
 	setting, _ := common.GetContextKeyType[dto.ChannelSettings](c, constant.ContextKeyChannelSetting)
 	group := requestGroup(c)
@@ -86,12 +89,13 @@ func Reply(c *gin.Context, format types.RelayFormat, info *relaycommon.RelayInfo
 	if format != types.RelayFormatOpenAIRealtime {
 		plan.capture(c, group, info.OriginModelName, setting.RequestPlugins)
 	}
+	finishIdentity := relaycommon.ResponseIdentityBoundary(c, format, info.OriginModelName)
 	if !plan.replies || !replyEndpoint(format, info.RelayMode, c.Request.URL.Path) {
-		return func() {}
+		return finishIdentity
 	}
 	instances := plan.scope(StageReply, group, info.OriginModelName, setting.RequestPlugins)
 	if len(instances) == 0 {
-		return func() {}
+		return finishIdentity
 	}
 	parent := c.Request.Context()
 	ctx, cancel := context.WithCancel(parent)
@@ -109,7 +113,7 @@ func Reply(c *gin.Context, format types.RelayFormat, info *relaycommon.RelayInfo
 	// client that went away, and the upstream request is canceled.
 	c.Request = c.Request.WithContext(ctx)
 	c.Writer = writer
-	return writer.finish
+	return func() { writer.finish(); finishIdentity() }
 }
 
 // replyTarget is one instance of a reply check and what it did over the whole

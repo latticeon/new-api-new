@@ -7,7 +7,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relay/requestplugin"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -40,15 +39,24 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 	// The request plugins answer the client and cancel upstream responses
 	// from either reader, so each socket takes one writer at a time.
 	var clientWriteMu, targetWriteMu sync.Mutex
-	writeClient := func(message []byte) error {
+	writeClientFrame := func(messageType int, message []byte) error {
 		clientWriteMu.Lock()
 		defer clientWriteMu.Unlock()
-		return helper.WssString(c, clientConn, string(message))
+		if messageType == websocket.TextMessage {
+			message = relaycommon.NormalizeResponseIdentity(message, types.RelayFormatOpenAIRealtime, info.OriginModelName)
+		}
+		return clientConn.WriteMessage(messageType, message)
 	}
-	writeTarget := func(message []byte) error {
+	writeClient := func(message []byte) error {
+		return writeClientFrame(websocket.TextMessage, message)
+	}
+	writeTargetFrame := func(messageType int, message []byte) error {
 		targetWriteMu.Lock()
 		defer targetWriteMu.Unlock()
-		return helper.WssString(c, targetConn, string(message))
+		return targetConn.WriteMessage(messageType, message)
+	}
+	writeTarget := func(message []byte) error {
+		return writeTargetFrame(websocket.TextMessage, message)
 	}
 	plugins := requestplugin.NewRealtime(c, info, func(message []byte) {
 		if err := writeClient(message); err != nil {
@@ -81,13 +89,20 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 			case <-c.Done():
 				return
 			default:
-				_, message, err := clientConn.ReadMessage()
+				messageType, message, err := clientConn.ReadMessage()
 				if err != nil {
 					if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 						errChan <- fmt.Errorf("error reading from client: %v", err)
 					}
 					close(clientClosed)
 					return
+				}
+				if messageType != websocket.TextMessage {
+					if err := writeTargetFrame(messageType, message); err != nil {
+						errChan <- fmt.Errorf("error writing to target: %w", err)
+						return
+					}
+					continue
 				}
 
 				realtimeEvent := &dto.RealtimeEvent{}
@@ -154,7 +169,7 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 			case <-c.Done():
 				return
 			default:
-				_, message, err := targetConn.ReadMessage()
+				messageType, message, err := targetConn.ReadMessage()
 				if err != nil {
 					if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 						errChan <- fmt.Errorf("error reading from target: %v", err)
@@ -163,6 +178,13 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 					return
 				}
 				info.SetFirstResponseTime()
+				if messageType != websocket.TextMessage {
+					if err := writeClientFrame(messageType, message); err != nil {
+						errChan <- fmt.Errorf("error writing to client: %w", err)
+						return
+					}
+					continue
+				}
 				realtimeEvent := &dto.RealtimeEvent{}
 				err = common.Unmarshal(message, realtimeEvent)
 				if err != nil {

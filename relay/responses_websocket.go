@@ -188,6 +188,7 @@ func ResponsesWebSocketHelper(c *gin.Context, client *websocket.Conn, runner Res
 
 func (s *responsesWSSession) runRequest(state *responsesWSCallState, message []byte, envelope responsesWSCreateEvent, streamID string, requestID string) {
 	create, parseErr := normalizeResponsesWSCreateEvent(message, envelope, streamID)
+	originalModel := create.Request.Model
 	var apiErr *types.NewAPIError
 	var upstreamURLs []string
 	defer func() {
@@ -208,6 +209,9 @@ func (s *responsesWSSession) runRequest(state *responsesWSCallState, message []b
 		}
 		s.clientWriteMu.Lock()
 		s.stateMu.Lock()
+		if outgoing != nil && outgoing.kind == websocket.TextMessage {
+			outgoing.body = relaycommon.NormalizeResponseIdentity(outgoing.body, types.RelayFormatOpenAIResponses, originalModel)
+		}
 		if outgoing != nil {
 			if err := s.client.SetWriteDeadline(s.clientWriteBudget.Deadline(time.Now(), len(outgoing.body))); err != nil {
 				state.closeCode = websocket.CloseInternalServerErr
@@ -560,8 +564,14 @@ func (s *responsesWSSession) runCall(c *gin.Context, state *responsesWSCallState
 				if socket != nil && incoming.kind == websocket.TextMessage {
 					socket.Event(incoming.body)
 					stopErr = socket.Stopped()
-				} else if err := s.writeClient(incoming.kind, incoming.body); err != nil {
-					s.shutdown(websocket.CloseInternalServerErr, "")
+				} else {
+					body := incoming.body
+					if incoming.kind == websocket.TextMessage {
+						body = relaycommon.NormalizeResponseIdentity(body, types.RelayFormatOpenAIResponses, modelName)
+					}
+					if err := s.writeClient(incoming.kind, body); err != nil {
+						s.shutdown(websocket.CloseInternalServerErr, "")
+					}
 				}
 			}
 			if accepted && pendingControl != nil {

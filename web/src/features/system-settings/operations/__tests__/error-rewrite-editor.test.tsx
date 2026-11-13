@@ -80,12 +80,12 @@ describe('error rewrite editor', () => {
   it('edits a rule source and replacement, toggles enabled, and preserves them in JSON', async () => {
     const user = userEvent.setup()
     renderEditor()
-    await user.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
     const dialog = screen.getByRole('dialog')
     await user.click(
       within(dialog).getByRole('combobox', { name: 'Rule source' })
     )
-    await user.click(screen.getByRole('option', { name: 'Local', exact: true }))
+    await user.click(screen.getByRole('option', { name: 'Local' }))
     await user.clear(within(dialog).getByLabelText('Replacement message'))
     await user.type(
       within(dialog).getByLabelText('Replacement message'),
@@ -129,9 +129,7 @@ describe('error rewrite editor', () => {
         { ...rule, replace: 'Second' },
       ]),
     })
-    await user.click(
-      screen.getAllByRole('button', { name: 'Edit', exact: true })[1]
-    )
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[1])
     const dialog = screen.getByRole('dialog')
     await user.clear(within(dialog).getByLabelText('Replacement message'))
     await user.type(
@@ -160,13 +158,10 @@ describe('error rewrite editor', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled()
     )
-    await user.click(
-      screen.getAllByRole('button', { name: 'Delete', exact: true })[1]
-    )
+    await user.click(screen.getAllByRole('button', { name: 'Delete' })[1])
     await user.click(
       within(screen.getByRole('alertdialog')).getByRole('button', {
         name: 'Delete',
-        exact: true,
       })
     )
     expect(
@@ -187,10 +182,9 @@ describe('error rewrite editor', () => {
     })
     const ruleSwitch = screen.getByRole('switch', {
       name: 'Enable rule',
-      exact: true,
     })
     expect(ruleSwitch).not.toBeChecked()
-    await user.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', {
         name: 'Apply rule',
@@ -244,16 +238,13 @@ describe('error rewrite editor', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     )
     expect(screen.getByRole('cell', { name: 'maintenance' })).toBeVisible()
-    await user.click(
-      screen.getByRole('button', { name: 'Delete', exact: true })
-    )
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
     expect(
       screen.getByRole('cell', { name: 'maintenance', hidden: true })
     ).toBeInTheDocument()
     await user.click(
       within(screen.getByRole('alertdialog')).getByRole('button', {
         name: 'Delete',
-        exact: true,
       })
     )
     expect(screen.getByText('No rules configured.')).toBeVisible()
@@ -271,9 +262,7 @@ describe('error rewrite editor', () => {
       screen.getByRole('textbox', { name: 'Error rewrite rules JSON' })
     ).toHaveValue('{broken')
     await user.click(screen.getByRole('button', { name: 'Save Changes' }))
-    await user.click(
-      screen.getByRole('button', { name: 'Preview', exact: true })
-    )
+    await user.click(screen.getByRole('button', { name: 'Preview' }))
     expect(api.put).not.toHaveBeenCalled()
     expect(post).not.toHaveBeenCalled()
   })
@@ -318,9 +307,7 @@ describe('error rewrite editor', () => {
     renderEditor()
     await user.click(screen.getByRole('button', { name: 'Save Changes' }))
     expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled()
-    expect(
-      screen.getByRole('button', { name: 'Edit', exact: true })
-    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
     expect(invalidate).not.toHaveBeenCalled()
     finish({ data: { success: true } })
     await waitFor(() => expect(toast.success).toHaveBeenCalled())
@@ -355,9 +342,7 @@ describe('error rewrite editor', () => {
     fireEvent.change(screen.getByLabelText('Original error message'), {
       target: { value: 'QUOTA (request id: abc)' },
     })
-    await user.click(
-      screen.getByRole('button', { name: 'Preview', exact: true })
-    )
+    await user.click(screen.getByRole('button', { name: 'Preview' }))
     expect(
       await screen.findByText('Server rewrite (request id: abc)')
     ).toBeVisible()
@@ -370,13 +355,11 @@ describe('error rewrite editor', () => {
       }
     )
     await user.click(screen.getByRole('combobox', { name: 'Preview source' }))
-    await user.click(screen.getByRole('option', { name: 'Local', exact: true }))
+    await user.click(screen.getByRole('option', { name: 'Local' }))
     expect(
       screen.queryByText('Server rewrite (request id: abc)')
     ).not.toBeInTheDocument()
-    await user.click(
-      screen.getByRole('button', { name: 'Preview', exact: true })
-    )
+    await user.click(screen.getByRole('button', { name: 'Preview' }))
     await waitFor(() =>
       expect(post).toHaveBeenLastCalledWith(
         '/api/option/error-message-rewrite/preview',

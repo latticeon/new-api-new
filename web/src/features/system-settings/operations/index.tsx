@@ -27,6 +27,7 @@ import {
 } from './section-registry.tsx'
 
 const defaultOperationsSettings: OperationsSettings = {
+  'general_setting.normalize_response_model_enabled': false,
   ErrorMessageRewriteEnabled: false,
   ErrorMessageRewriteRules: '[]',
   DefaultCollapseSidebar: false,

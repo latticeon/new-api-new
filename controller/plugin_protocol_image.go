@@ -80,6 +80,7 @@ func serveTaskPluginImageProtocol(c *gin.Context, pinned pluginruntime.PinnedEnd
 		}
 		outcome, taskErr = deps.submit(c, relayInfo)
 	}()
+	defer relaycommon.ResponseIdentityBoundary(c, types.RelayFormatOpenAIImage, protocolRequest.Model)()
 	if clientRequest.Context().Err() != nil {
 		// The client is gone. A durable task keeps its settlement and consume
 		// log; an asynchronous one is finished by the background poller.

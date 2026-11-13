@@ -7777,6 +7777,8 @@
     "Error rewrite rules JSON": "エラー書き換えルール JSON",
     "No rules configured.": "ルールが設定されていません。",
     "Enable rule {{name}}": "ルール {{name}} を有効化",
-    "Delete rule {{name}}?": "ルール {{name}} を削除しますか？"
+    "Delete rule {{name}}?": "ルール {{name}} を削除しますか？",
+    "Normalize response model names": "応答のモデル名を統一",
+    "Return the requested model name without changing routing, usage or billing": "ルーティング、使用量、課金を変更せず、リクエストされたモデル名を返します"
   }
 }

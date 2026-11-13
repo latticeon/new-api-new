@@ -15,12 +15,16 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
+	"github.com/QuantumNous/new-api/relay/requestplugin"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func TestResponseModelComparisonAndLog(t *testing.T) {
@@ -172,6 +176,10 @@ func TestResponseModelRetryResetsObservation(t *testing.T) {
 }
 
 func TestResponseModelHandlersCaptureBeforeConversion(t *testing.T) {
+	setting := operation_setting.GetGeneralSetting()
+	previous := setting.NormalizeResponseModelEnabled
+	setting.NormalizeResponseModelEnabled = true
+	t.Cleanup(func() { setting.NormalizeResponseModelEnabled = previous })
 	gin.SetMode(gin.TestMode)
 	previousTimeout := constant.StreamingTimeout
 	constant.StreamingTimeout = 30
@@ -216,15 +224,36 @@ func TestResponseModelHandlersCaptureBeforeConversion(t *testing.T) {
 		{"gemini to responses stream", geminiStream, types.RelayFormatOpenAIResponses, true, gemini.GeminiResponsesStreamHandler},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
 			c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 			info := &relaycommon.RelayInfo{
 				OriginModelName: "requested", RelayFormat: tc.format, RelayMode: relayconstant.RelayModeChatCompletions,
 				IsStream: tc.stream, DisablePing: true, StartTime: time.Now(),
-				ChannelMeta:         &relaycommon.ChannelMeta{UpstreamModelName: "mapped"},
+				ChannelMeta:         &relaycommon.ChannelMeta{UpstreamModelName: "mapped", IsModelMapped: true},
 				ThinkingContentInfo: relaycommon.ThinkingContentInfo{IsFirstThinkingContent: true},
 			}
-			usage, apiErr := tc.handler(c, info, &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(tc.body))})
+			finish := requestplugin.Reply(c, tc.format, info)
+			header := make(http.Header)
+			header.Set("Content-Type", "application/json")
+			if tc.stream {
+				header.Set("Content-Type", "text/event-stream")
+			}
+			usage, apiErr := tc.handler(c, info, &http.Response{StatusCode: http.StatusOK, Header: header, Body: io.NopCloser(strings.NewReader(tc.body))})
+			finish()
+			assert.NotContains(t, recorder.Body.String(), `"model":"returned"`)
+			assert.NotContains(t, recorder.Body.String(), `"modelVersion":"returned"`)
+			if tc.name == "chat" {
+				assert.Equal(t, "requested", gjson.Get(recorder.Body.String(), "model").String())
+				assert.Equal(t, "hello", gjson.Get(recorder.Body.String(), "choices.0.message.content").String())
+			}
+			// Claude's existing streaming handlers adopt the returned routing name.
+			expectedUpstream := "mapped"
+			if tc.name == "claude stream" || tc.name == "claude to responses stream" {
+				expectedUpstream = "returned"
+			}
+			assert.Equal(t, expectedUpstream, info.UpstreamModelName)
+			assert.Equal(t, "requested", info.OriginModelName)
 			require.Nil(t, apiErr)
 			require.NotNil(t, usage)
 			assert.Equal(t, 5, usage.TotalTokens)
@@ -262,4 +291,58 @@ func TestResponseModelDoesNotRecordSynthesizedModel(t *testing.T) {
 	})
 	require.Nil(t, apiErr)
 	assert.Nil(t, info.ResponseModel)
+}
+
+func TestResponseModelRealtimeDeliveryPreservesFramesAndRouting(t *testing.T) {
+	setting := operation_setting.GetGeneralSetting()
+	previous := setting.NormalizeResponseModelEnabled
+	t.Cleanup(func() { setting.NormalizeResponseModelEnabled = previous })
+	for _, enabled := range []bool{false, true} {
+		t.Run(map[bool]string{false: "disabled", true: "enabled"}[enabled], func(t *testing.T) {
+			setting.NormalizeResponseModelEnabled = enabled
+			client, gatewayClient, cleanupClient := newTestWebSocketPair(t)
+			defer cleanupClient()
+			gatewayTarget, upstream, cleanupTarget := newTestWebSocketPair(t)
+			defer cleanupTarget()
+			require.NoError(t, client.SetReadDeadline(time.Now().Add(5*time.Second)))
+			require.NoError(t, upstream.SetReadDeadline(time.Now().Add(5*time.Second)))
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = httptest.NewRequest(http.MethodGet, "/v1/realtime", nil)
+			info := &relaycommon.RelayInfo{
+				OriginModelName: "requested", ChannelMeta: &relaycommon.ChannelMeta{UpstreamModelName: "mapped"},
+				ClientWs: gatewayClient, TargetWs: gatewayTarget, StartTime: time.Now(),
+			}
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				openai.OpenaiRealtimeHandler(c, info)
+			}()
+			text := []byte(`{"type":"session.created","session":{"model":"returned","instructions":"returned","tools":[{"name":"returned"}]}}`)
+			require.NoError(t, upstream.WriteMessage(websocket.TextMessage, text))
+			kind, delivered, err := client.ReadMessage()
+			require.NoError(t, err)
+			assert.Equal(t, websocket.TextMessage, kind)
+			want := "returned"
+			if enabled { want = "requested" }
+			assert.Equal(t, want, gjson.GetBytes(delivered, "session.model").String())
+			assert.Equal(t, "returned", gjson.GetBytes(delivered, "session.instructions").String())
+			assert.Equal(t, "returned", gjson.GetBytes(delivered, "session.tools.0.name").String())
+			for _, direction := range []bool{false, true} {
+				from, to := upstream, client
+				if direction { from, to = client, upstream }
+				require.NoError(t, from.WriteMessage(websocket.BinaryMessage, text))
+				kind, delivered, err = to.ReadMessage()
+				require.NoError(t, err)
+				assert.Equal(t, websocket.BinaryMessage, kind)
+				assert.Equal(t, text, delivered)
+			}
+			require.NoError(t, client.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")))
+			select {
+			case <-done:
+			case <-time.After(5*time.Second): t.Fatal("Realtime handler did not finish")
+			}
+			assert.Equal(t, "requested", info.OriginModelName)
+			assert.Equal(t, "mapped", info.UpstreamModelName)
+		})
+	}
 }

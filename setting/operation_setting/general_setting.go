@@ -11,9 +11,10 @@ const (
 )
 
 type GeneralSetting struct {
-	DocsLink            string `json:"docs_link"`
-	PingIntervalEnabled bool   `json:"ping_interval_enabled"`
-	PingIntervalSeconds int    `json:"ping_interval_seconds"`
+	NormalizeResponseModelEnabled bool   `json:"normalize_response_model_enabled"`
+	DocsLink                      string `json:"docs_link"`
+	PingIntervalEnabled           bool   `json:"ping_interval_enabled"`
+	PingIntervalSeconds           int    `json:"ping_interval_seconds"`
 	// 当前站点额度展示类型：USD / CNY / TOKENS
 	QuotaDisplayType string `json:"quota_display_type"`
 	// 自定义货币符号，用于 CUSTOM 展示类型

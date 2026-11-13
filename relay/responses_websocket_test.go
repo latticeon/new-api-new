@@ -803,3 +803,40 @@ func TestResponsesWSErrorAttribution(t *testing.T) {
 		})
 	}
 }
+
+func TestResponsesWSNormalizesTerminalDeliveryCopy(t *testing.T) {
+	setting := operation_setting.GetGeneralSetting()
+	previous := setting.NormalizeResponseModelEnabled
+	setting.NormalizeResponseModelEnabled = true
+	t.Cleanup(func() { setting.NormalizeResponseModelEnabled = previous })
+	upstream := []byte(`{"type":"response.completed","response":{"model":"upstream","output":[{"type":"function_call","arguments":"{\"model\":\"upstream\"}"}],"usage":{"total_tokens":5}}}`)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		state := &responsesWSCallState{done: make(chan struct{})}
+		session := &responsesWSSession{client: conn, request: r, ctx: r.Context()}
+		session.runner = func(_ *http.Request, _ string, _ func(*gin.Context) *types.NewAPIError) *types.NewAPIError {
+			state.terminal = &responsesWSMessage{kind: websocket.TextMessage, body: upstream}
+			return nil
+		}
+		message := []byte(`{"type":"response.create","model":"client-alias"}`)
+		envelope, streamID, parseErr := parseResponsesWSEnvelope(message)
+		if parseErr != nil {
+			return
+		}
+		session.runRequest(state, message, envelope, streamID, "req-normalize")
+	}))
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
+	require.NoError(t, err)
+	defer conn.Close()
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(5*time.Second)))
+	kind, body, err := conn.ReadMessage()
+	require.NoError(t, err)
+	assert.Equal(t, websocket.TextMessage, kind)
+	assert.JSONEq(t, `{"type":"response.completed","response":{"model":"client-alias","output":[{"type":"function_call","arguments":"{\"model\":\"upstream\"}"}],"usage":{"total_tokens":5}}}`, string(body))
+	assert.Contains(t, string(upstream), `"model":"upstream"`)
+}

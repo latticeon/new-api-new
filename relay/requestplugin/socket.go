@@ -55,6 +55,7 @@ type SocketResponse struct {
 	capture *responseCapture
 	send    func([]byte)
 	stopErr *types.NewAPIError
+	model   string
 }
 
 // ResponsesSocket starts the reply check and the report capture of one
@@ -68,7 +69,7 @@ func ResponsesSocket(c *gin.Context, info *relaycommon.RelayInfo, send func([]by
 	}
 	call := attemptCall(c, info)
 	plan.capture(c, call.Group, call.Model, call.Bound)
-	socket := &SocketResponse{capture: plan.response, send: send}
+	socket := &SocketResponse{capture: plan.response, send: send, model: info.OriginModelName}
 	if plan.replies {
 		if instances := plan.scope(StageReply, call.Group, call.Model, call.Bound); len(instances) > 0 {
 			call.Format = string(types.RelayFormatOpenAIResponses)
@@ -85,6 +86,7 @@ func ResponsesSocket(c *gin.Context, info *relaycommon.RelayInfo, send func([]by
 
 // out sends one event to the client and keeps it for the report.
 func (s *SocketResponse) out(message []byte) {
+	message = relaycommon.NormalizeResponseIdentity(message, types.RelayFormatOpenAIResponses, s.model)
 	s.send(message)
 	if s.capture != nil {
 		s.capture.event(message)
@@ -133,6 +135,7 @@ func (s *SocketResponse) Terminal(message []byte) []byte {
 			message = last
 		}
 	}
+	message = relaycommon.NormalizeResponseIdentity(message, types.RelayFormatOpenAIResponses, s.model)
 	if s.capture != nil {
 		s.capture.event(message)
 	}
@@ -523,6 +526,7 @@ func (r *Realtime) start(id string) *realtimeResponse {
 // out sends one event of a response to the client and keeps it for the
 // report.
 func (response *realtimeResponse) out(r *Realtime, message []byte) {
+	message = relaycommon.NormalizeResponseIdentity(message, types.RelayFormatOpenAIRealtime, r.call.Model)
 	r.toClient(message)
 	if response.capture != nil {
 		response.capture.event(message)

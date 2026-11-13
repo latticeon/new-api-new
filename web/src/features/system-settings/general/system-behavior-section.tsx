@@ -32,6 +32,7 @@ import { Switch } from '@/components/ui/switch'
 
 import {
   SettingsForm,
+  SettingsSwitchField,
   SettingsSwitchContent,
   SettingsSwitchItem,
 } from '../components/settings-form-layout'
@@ -42,6 +43,7 @@ import { useUpdateOption } from '../hooks/use-update-option'
 
 const behaviorSchema = z.object({
   DefaultCollapseSidebar: z.boolean(),
+  NormalizeResponseModelEnabled: z.boolean(),
   DemoSiteEnabled: z.boolean(),
   SelfUseModeEnabled: z.boolean(),
 })
@@ -71,7 +73,11 @@ export function SystemBehaviorSection({
     )
 
     for (const [key, value] of updates) {
-      await updateOption.mutateAsync({ key, value })
+      const optionKey =
+        key === 'NormalizeResponseModelEnabled'
+          ? 'general_setting.normalize_response_model_enabled'
+          : key
+      await updateOption.mutateAsync({ key: optionKey, value })
     }
   }
 
@@ -81,6 +87,7 @@ export function SystemBehaviorSection({
         <SettingsForm onSubmit={form.handleSubmit(onSubmit)}>
           <SettingsPageFormActions
             onSave={form.handleSubmit(onSubmit)}
+            onReset={() => form.reset(defaultValues)}
             isSaving={updateOption.isPending}
           />
           <FormField
@@ -143,6 +150,22 @@ export function SystemBehaviorSection({
                   />
                 </FormControl>
               </SettingsSwitchItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name='NormalizeResponseModelEnabled'
+            render={({ field }) => (
+              <SettingsSwitchField
+                controlId='normalize-response-model'
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                disabled={updateOption.isPending}
+                label={t('Normalize response model names')}
+                description={t(
+                  'Return the requested model name without changing routing, usage or billing'
+                )}
+              />
             )}
           />
         </SettingsForm>

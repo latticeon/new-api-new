@@ -7777,6 +7777,8 @@
     "Error rewrite rules JSON": "Правила перезаписи ошибок JSON",
     "No rules configured.": "Правила не настроены.",
     "Enable rule {{name}}": "Включить правило {{name}}",
-    "Delete rule {{name}}?": "Удалить правило {{name}}?"
+    "Delete rule {{name}}?": "Удалить правило {{name}}?",
+    "Normalize response model names": "Унифицировать имена моделей в ответах",
+    "Return the requested model name without changing routing, usage or billing": "Возвращать запрошенное имя модели без изменения маршрутизации, использования и тарификации"
   }
 }

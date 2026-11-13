@@ -254,6 +254,7 @@ func serveTaskPluginProtocol(
 	defer func() {
 		requestplugin.Report(c, types.RelayFormatTask, relayInfo, nil, taskReportError(taskErr))
 	}()
+	defer relaycommon.ResponseIdentityBoundary(c, types.RelayFormatOpenAIResponses, protocolRequest.Model)()
 	submissionStage := "relay_info"
 	// A Responses client only observes an asynchronous task. Once admitted,
 	// disconnecting that observer must not cancel submission, persistence, or
@@ -990,6 +991,7 @@ func retrieveTaskPluginResponse(c *gin.Context, deps pluginProtocolBridgeDeps) {
 		writeTaskPluginResponseNotFound(c, responseID, "no_claim")
 		return
 	}
+	defer relaycommon.ResponseIdentityBoundary(c, types.RelayFormatOpenAIResponses, task.Properties.OriginModelName)()
 
 	generationNumber := uint64(0)
 	if generation != nil {

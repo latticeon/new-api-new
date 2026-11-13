@@ -7777,6 +7777,8 @@
     "Error rewrite rules JSON": "JSON quy tắc viết lại lỗi",
     "No rules configured.": "Chưa có quy tắc nào.",
     "Enable rule {{name}}": "Bật quy tắc {{name}}",
-    "Delete rule {{name}}?": "Xóa quy tắc {{name}}?"
+    "Delete rule {{name}}?": "Xóa quy tắc {{name}}?",
+    "Normalize response model names": "Chuẩn hóa tên mô hình trong phản hồi",
+    "Return the requested model name without changing routing, usage or billing": "Trả về tên mô hình được yêu cầu mà không thay đổi định tuyến, mức sử dụng hay tính phí"
   }
 }

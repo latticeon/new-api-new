@@ -15,6 +15,7 @@ import (
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -283,6 +284,10 @@ func TestRealtimeReplyStops(t *testing.T) {
 // Report runs once per response.done, with the events the client got,
 // leaving out audio, and the quota the response was charged.
 func TestRealtimeReport(t *testing.T) {
+	setting := operation_setting.GetGeneralSetting()
+	previous := setting.NormalizeResponseModelEnabled
+	setting.NormalizeResponseModelEnabled = true
+	t.Cleanup(func() { setting.NormalizeResponseModelEnabled = previous })
 	server, received := newService(t)
 	setupReplyPlugins(t, `[]`)
 	registerNetPlugin(t)
@@ -290,7 +295,7 @@ func TestRealtimeReport(t *testing.T) {
 	session := newRealtimeSession(t)
 	require.NotNil(t, session.Realtime)
 	for range 2 {
-		session.ServerEvent("response.created", []byte(`{"type":"response.created","response":{"id":"resp_1"}}`), nil, 0)
+		session.ServerEvent("response.created", []byte(`{"type":"response.created","response":{"id":"resp_1","model":"upstream","metadata":{"model":"upstream"}}}`), nil, 0)
 		session.ServerEvent("response.audio.delta", []byte(`{"type":"response.audio.delta","response_id":"resp_1","delta":"AAAA"}`), nil, 0)
 		session.ServerEvent("response.text.delta", realtimeDelta("response.text.delta", "hello"), nil, 0)
 		session.ServerEvent("response.done", realtimeDone(gin.H{"type": "text", "text": "hello"}), &dto.RealtimeUsage{InputTokens: 20, OutputTokens: 10, TotalTokens: 30}, 900)
@@ -310,6 +315,9 @@ func TestRealtimeReport(t *testing.T) {
 			kinds = append(kinds, event.Get("data.type").Str)
 		}
 		assert.Equal(t, []string{"response.created", "response.text.delta", "response.done"}, kinds)
+		assert.Equal(t, "gpt", record.Get("response.events.0.data.response.model").Str)
+		assert.Equal(t, "upstream", record.Get("response.events.0.data.response.metadata.model").Str)
+		assert.Equal(t, "gpt", gjson.Get(session.client[0], "response.model").Str)
 	}
 	assert.Empty(t, received)
 }
@@ -317,6 +325,10 @@ func TestRealtimeReport(t *testing.T) {
 // A Responses WebSocket response goes through the reply check event by
 // event; its terminal event comes back for the session to send.
 func TestResponsesSocket(t *testing.T) {
+	setting := operation_setting.GetGeneralSetting()
+	previous := setting.NormalizeResponseModelEnabled
+	setting.NormalizeResponseModelEnabled = true
+	t.Cleanup(func() { setting.NormalizeResponseModelEnabled = previous })
 	setupReplyPlugins(t, `[{"id":"mask","name":"Mask","plugin":"rp-reply","enabled":true,"global":true,"config":{"words":["bad"]}}]`)
 	c, _ := replyContext(t, "/v1/responses", types.RelayFormatOpenAIResponses)
 	common.SetContextKey(c, constant.ContextKeyOriginalModel, "gpt")
@@ -331,10 +343,16 @@ func TestResponsesSocket(t *testing.T) {
 		encoded, _ := common.Marshal(gin.H{"type": "response.output_text.delta", "item_id": "msg_1", "output_index": 0, "content_index": 0, "delta": text})
 		return encoded
 	}
-	socket.Event([]byte(`{"type":"response.created","response":{"id":"resp_1"}}`))
+	socket.Event([]byte(`{"type":"response.created","response":{"id":"resp_1","model":"upstream"}}`))
 	socket.Event(delta("a bad "))
 	socket.Event(delta("word"))
-	terminal := socket.Terminal([]byte(`{"type":"response.completed","response":{"id":"resp_1","output":[{"type":"message","id":"msg_1","content":[{"type":"output_text","text":"a bad word"}]}]}}`))
+	upstreamTerminal := []byte(`{"type":"response.completed","response":{"id":"resp_1","model":"upstream","usage":{"total_tokens":5},"output":[{"type":"message","id":"msg_1","content":[{"type":"output_text","text":"a bad word"}]}]}}`)
+	terminal := socket.Terminal(upstreamTerminal)
+	assert.Equal(t, "gpt", gjson.Get(sent[0], "response.model").Str)
+	assert.Equal(t, "gpt", gjson.GetBytes(terminal, "response.model").Str)
+	assert.Equal(t, int64(5), gjson.GetBytes(terminal, "response.usage.total_tokens").Int())
+	assert.Equal(t, "upstream", gjson.GetBytes(upstreamTerminal, "response.model").Str)
+	assert.Equal(t, "a bad word", gjson.GetBytes(upstreamTerminal, "response.output.0.content.0.text").Str)
 	assert.Nil(t, socket.Stopped())
 	require.Len(t, sent, 3)
 	assert.Equal(t, "a *** ", gjson.Get(sent[1], "delta").Str)

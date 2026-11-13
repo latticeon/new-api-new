@@ -7777,6 +7777,8 @@
     "Error rewrite rules JSON": "Error rewrite rules JSON",
     "No rules configured.": "No rules configured.",
     "Enable rule {{name}}": "Enable rule {{name}}",
-    "Delete rule {{name}}?": "Delete rule {{name}}?"
+    "Delete rule {{name}}?": "Delete rule {{name}}?",
+    "Normalize response model names": "Normalize response model names",
+    "Return the requested model name without changing routing, usage or billing": "Return the requested model name without changing routing, usage or billing"
   }
 }

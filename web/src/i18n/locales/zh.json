@@ -7777,6 +7777,8 @@
     "Error rewrite rules JSON": "错误改写规则 JSON",
     "No rules configured.": "暂无规则。",
     "Enable rule {{name}}": "启用规则 {{name}}",
-    "Delete rule {{name}}?": "删除规则 {{name}}？"
+    "Delete rule {{name}}?": "删除规则 {{name}}？",
+    "Normalize response model names": "返回模型名归一",
+    "Return the requested model name without changing routing, usage or billing": "返回客户端请求的模型名，不改变路由、用量或计费"
   }
 }

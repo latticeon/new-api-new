@@ -7777,6 +7777,8 @@
     "Error rewrite rules JSON": "Règles de réécriture JSON",
     "No rules configured.": "Aucune règle configurée.",
     "Enable rule {{name}}": "Activer la règle {{name}}",
-    "Delete rule {{name}}?": "Supprimer la règle {{name}} ?"
+    "Delete rule {{name}}?": "Supprimer la règle {{name}} ?",
+    "Normalize response model names": "Uniformiser les noms de modèle renvoyés",
+    "Return the requested model name without changing routing, usage or billing": "Renvoyer le nom du modèle demandé sans modifier le routage, l’utilisation ni la facturation"
   }
 }
