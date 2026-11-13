@@ -325,10 +325,10 @@ func Report(c *gin.Context, format types.RelayFormat, info *relaycommon.RelayInf
 func newReportError(format types.RelayFormat, apiErr *types.NewAPIError, upstreamURLs []string) *reportError {
 	reported := &reportError{Status: apiErr.StatusCode, Code: apiErr.GetErrorCode()}
 	if format == types.RelayFormatClaude {
-		claudeErr := apiErr.ToClaudeError(upstreamURLs...)
+		claudeErr := service.ClientClaudeError(apiErr, upstreamURLs...)
 		reported.Type, reported.Message = claudeErr.Type, claudeErr.Message
 	} else {
-		openAIErr := apiErr.ToOpenAIError(upstreamURLs...)
+		openAIErr := service.ClientOpenAIError(apiErr, upstreamURLs...)
 		reported.Code, reported.Type, reported.Message = openAIErr.Code, openAIErr.Type, openAIErr.Message
 	}
 	return reported

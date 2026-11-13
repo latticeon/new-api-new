@@ -985,9 +985,9 @@ func (w *replyWriter) targetPlugin(instance string) string {
 func replyErrorBody(c *gin.Context, format types.RelayFormat, apiErr *types.NewAPIError) gin.H {
 	upstreamURLs := common.UpstreamAddresses(c)
 	if format == types.RelayFormatClaude {
-		return gin.H{"type": "error", "error": apiErr.ToClaudeError(upstreamURLs...)}
+		return gin.H{"type": "error", "error": service.ClientClaudeError(apiErr, upstreamURLs...)}
 	}
-	return gin.H{"error": apiErr.ToOpenAIError(upstreamURLs...)}
+	return gin.H{"error": service.ClientOpenAIError(apiErr, upstreamURLs...)}
 }
 
 // events reads the whole events of the buffer.

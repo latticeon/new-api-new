@@ -12,6 +12,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -157,4 +158,33 @@ func withDebugEnabled(t *testing.T, enabled bool) {
 	t.Cleanup(func() {
 		common.DebugEnabled = oldDebug
 	})
+}
+
+func TestClientErrorRewritePreservesOriginalError(t *testing.T) {
+	common.OptionMapRWMutex.Lock()
+	original := common.OptionMap
+	common.OptionMap = map[string]string{
+		common.OptionErrorMessageRewriteEnabled: "true",
+		common.OptionErrorMessageRewriteRules:   `[{"enabled":true,"source":"upstream","patterns":["original"],"replace":"Try later"},{"enabled":true,"source":"local","patterns":["original"],"replace":"Local message"}]`,
+	}
+	common.OptionMapRWMutex.Unlock()
+	t.Cleanup(func() { common.OptionMapRWMutex.Lock(); common.OptionMap = original; common.OptionMapRWMutex.Unlock() })
+	for _, apiErr := range []*types.NewAPIError{
+		types.WithOpenAIError(types.OpenAIError{Message: "original", Type: "invalid_request", Code: "invalid_request"}, 429),
+		types.WithClaudeError(types.ClaudeError{Message: "original", Type: "invalid_request"}, 429),
+		types.NewErrorWithStatusCode(fmt.Errorf("original"), types.ErrorCodeInvalidRequest, 400),
+	} {
+		expected := "Try later"
+		if apiErr.GetErrorSource() == types.ErrorMessageSourceLocal {
+			expected = "Local message"
+		}
+		before := apiErr.ToOpenAIError()
+		actual := ClientOpenAIError(apiErr)
+		assert.Equal(t, expected, actual.Message)
+		assert.Equal(t, before.Type, actual.Type)
+		assert.Equal(t, before.Code, actual.Code)
+		assert.Equal(t, expected, ClientClaudeError(apiErr).Message)
+		assert.Equal(t, "original", apiErr.Error())
+		assert.Equal(t, before, apiErr.ToOpenAIError())
+	}
 }

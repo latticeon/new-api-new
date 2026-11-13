@@ -225,6 +225,16 @@ func UpdateOption(c *gin.Context) {
 		}
 	}
 	switch option.Key {
+	case common.OptionErrorMessageRewriteRules:
+		if err = common.ValidateErrorMessageRewriteRules(option.Value.(string)); err != nil {
+			common.ApiErrorT(c, "Invalid error rewrite rules: {{error}}", map[string]any{"error": err.Error()})
+			return
+		}
+	case common.OptionErrorMessageRewriteEnabled:
+		if option.Value != "true" && option.Value != "false" {
+			common.ApiErrorT(c, "Invalid parameters")
+			return
+		}
 	case "GitHubOAuthEnabled":
 		if option.Value == "true" && common.GitHubClientId == "" {
 			common.ApiErrorT(c, "Cannot enable {{provider}}. Enter the {{provider}} Client ID and Client Secret first.", map[string]any{"provider": "GitHub OAuth"})

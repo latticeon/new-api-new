@@ -90,6 +90,15 @@ const (
 	ErrorCodePreConsumeTokenQuotaFailed ErrorCode = "pre_consume_token_quota_failed"
 )
 
+// ErrorMessageSource is gateway-owned metadata; upstream type/code cannot set it.
+type ErrorMessageSource string
+
+const (
+	ErrorMessageSourceAll      ErrorMessageSource = "all"
+	ErrorMessageSourceUpstream ErrorMessageSource = "upstream"
+	ErrorMessageSourceLocal    ErrorMessageSource = "local"
+)
+
 type NewAPIError struct {
 	Err            error
 	RelayError     any
@@ -97,6 +106,7 @@ type NewAPIError struct {
 	recordErrorLog *bool
 	errorType      ErrorType
 	errorCode      ErrorCode
+	errorSource    ErrorMessageSource
 	StatusCode     int
 	Metadata       json.RawMessage
 }
@@ -121,6 +131,27 @@ func (e *NewAPIError) GetErrorType() ErrorType {
 		return ""
 	}
 	return e.errorType
+}
+
+func (e *NewAPIError) GetErrorSource() ErrorMessageSource {
+	if e == nil || e.errorSource == "" {
+		return ErrorMessageSourceLocal
+	}
+	return e.errorSource
+}
+
+func errorSourceForCode(code ErrorCode) ErrorMessageSource {
+	switch code {
+	case ErrorCodeDoRequestFailed, ErrorCodeReadResponseBodyFailed, ErrorCodeBadResponseStatusCode,
+		ErrorCodeBadResponse, ErrorCodeBadResponseBody, ErrorCodeEmptyResponse, ErrorCodeAwsInvokeError, ErrorCodePromptBlocked:
+		return ErrorMessageSourceUpstream
+	default:
+		return ErrorMessageSourceLocal
+	}
+}
+
+func ErrOptionWithErrorSource(source ErrorMessageSource) NewAPIErrorOptions {
+	return func(e *NewAPIError) { e.errorSource = source }
 }
 
 func (e *NewAPIError) Error() string {
@@ -259,11 +290,12 @@ func NewError(err error, errorCode ErrorCode, ops ...NewAPIErrorOptions) *NewAPI
 		return newErr
 	}
 	e := &NewAPIError{
-		Err:        err,
-		RelayError: nil,
-		errorType:  ErrorTypeNewAPIError,
-		StatusCode: http.StatusInternalServerError,
-		errorCode:  errorCode,
+		Err:         err,
+		RelayError:  nil,
+		errorType:   ErrorTypeNewAPIError,
+		StatusCode:  http.StatusInternalServerError,
+		errorCode:   errorCode,
+		errorSource: errorSourceForCode(errorCode),
 	}
 	for _, op := range ops {
 		op(e)
@@ -293,7 +325,8 @@ func NewOpenAIError(err error, errorCode ErrorCode, statusCode int, ops ...NewAP
 		Type:    string(errorCode),
 		Code:    errorCode,
 	}
-	return WithOpenAIError(openaiError, statusCode, ops...)
+	options := append([]NewAPIErrorOptions{ErrOptionWithErrorSource(errorSourceForCode(errorCode))}, ops...)
+	return WithOpenAIError(openaiError, statusCode, options...)
 }
 
 func InitOpenAIError(errorCode ErrorCode, statusCode int, ops ...NewAPIErrorOptions) *NewAPIError {
@@ -301,7 +334,8 @@ func InitOpenAIError(errorCode ErrorCode, statusCode int, ops ...NewAPIErrorOpti
 		Type: string(errorCode),
 		Code: errorCode,
 	}
-	return WithOpenAIError(openaiError, statusCode, ops...)
+	options := append([]NewAPIErrorOptions{ErrOptionWithErrorSource(errorSourceForCode(errorCode))}, ops...)
+	return WithOpenAIError(openaiError, statusCode, options...)
 }
 
 func NewErrorWithStatusCode(err error, errorCode ErrorCode, statusCode int, ops ...NewAPIErrorOptions) *NewAPIError {
@@ -311,9 +345,14 @@ func NewErrorWithStatusCode(err error, errorCode ErrorCode, statusCode int, ops 
 			Message: err.Error(),
 			Type:    string(errorCode),
 		},
-		errorType:  ErrorTypeNewAPIError,
-		StatusCode: statusCode,
-		errorCode:  errorCode,
+		errorType:   ErrorTypeNewAPIError,
+		StatusCode:  statusCode,
+		errorCode:   errorCode,
+		errorSource: errorSourceForCode(errorCode),
+	}
+	var inner *NewAPIError
+	if errors.As(err, &inner) {
+		e.errorSource = inner.GetErrorSource()
 	}
 	for _, op := range ops {
 		op(e)
@@ -335,11 +374,12 @@ func WithOpenAIError(openAIError OpenAIError, statusCode int, ops ...NewAPIError
 		openAIError.Type = "upstream_error"
 	}
 	e := &NewAPIError{
-		RelayError: openAIError,
-		errorType:  ErrorTypeOpenAIError,
-		StatusCode: statusCode,
-		Err:        errors.New(openAIError.Message),
-		errorCode:  ErrorCode(code),
+		RelayError:  openAIError,
+		errorType:   ErrorTypeOpenAIError,
+		StatusCode:  statusCode,
+		Err:         errors.New(openAIError.Message),
+		errorCode:   ErrorCode(code),
+		errorSource: ErrorMessageSourceUpstream,
 	}
 	// OpenRouter
 	if len(openAIError.Metadata) > 0 {
@@ -359,11 +399,12 @@ func WithClaudeError(claudeError ClaudeError, statusCode int, ops ...NewAPIError
 		claudeError.Type = "upstream_error"
 	}
 	e := &NewAPIError{
-		RelayError: claudeError,
-		errorType:  ErrorTypeClaudeError,
-		StatusCode: statusCode,
-		Err:        errors.New(claudeError.Message),
-		errorCode:  ErrorCode(claudeError.Type),
+		RelayError:  claudeError,
+		errorType:   ErrorTypeClaudeError,
+		StatusCode:  statusCode,
+		Err:         errors.New(claudeError.Message),
+		errorCode:   ErrorCode(claudeError.Type),
+		errorSource: ErrorMessageSourceUpstream,
 	}
 	for _, op := range ops {
 		op(e)

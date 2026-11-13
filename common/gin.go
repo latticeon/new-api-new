@@ -14,6 +14,7 @@ import (
 
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/pkg/errors"
 
 	"github.com/gin-gonic/gin"
@@ -294,6 +295,20 @@ func ApiErrorStatus(c *gin.Context, status int, err error, fields ...gin.H) {
 	for _, extra := range fields {
 		maps.Copy(body, extra)
 	}
+	source := ErrorMessageSourceLocal
+	var sourced interface {
+		GetErrorSource() types.ErrorMessageSource
+	}
+	if errors.As(err, &sourced) {
+		source = sourced.GetErrorSource()
+	}
+	if text, ok := body["message"].(string); ok {
+		if rewritten := RewriteErrorMessage(text, source); rewritten != text {
+			body["message"] = rewritten
+			delete(body, "message_key")
+			delete(body, "message_params")
+		}
+	}
 	c.JSON(status, body)
 }
 
@@ -316,10 +331,7 @@ func ApiSuccessT(c *gin.Context, key string, data any, params ...map[string]any)
 }
 
 func ApiErrorMsg(c *gin.Context, msg string) {
-	c.JSON(http.StatusOK, gin.H{
-		"success": false,
-		"message": msg,
-	})
+	ApiError(c, errors.New(msg))
 }
 
 func ApiSuccess(c *gin.Context, data any) {
@@ -334,10 +346,7 @@ func ApiSuccess(c *gin.Context, data any) {
 // key is the i18n message key, args is optional template data
 func ApiErrorI18n(c *gin.Context, key string, args ...map[string]any) {
 	msg := TranslateMessage(c, key, args...)
-	c.JSON(http.StatusOK, gin.H{
-		"success": false,
-		"message": msg,
-	})
+	ApiError(c, errors.New(msg))
 }
 
 // ApiSuccessI18n returns a translated success message based on the user's language preference

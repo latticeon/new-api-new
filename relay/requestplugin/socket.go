@@ -16,6 +16,7 @@ import (
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/request_plugin_setting"
 
 	"github.com/gin-gonic/gin"
@@ -382,7 +383,7 @@ func (e errRealtimeMember) Error() string {
 // realtimeError is a Realtime error event for a client event the instances
 // stopped, or for a response they stopped (eventID "").
 func realtimeError(apiErr *types.NewAPIError, eventID string) []byte {
-	openAIErr := apiErr.ToOpenAIError()
+	openAIErr := service.ClientOpenAIError(apiErr)
 	errorObject := gin.H{"type": openAIErr.Type, "code": openAIErr.Code, "message": openAIErr.Message, "param": openAIErr.Param}
 	if eventID != "" {
 		errorObject["event_id"] = eventID

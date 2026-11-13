@@ -361,6 +361,8 @@ export type BillingSettings = {
 }
 
 export type OperationsSettings = {
+  ErrorMessageRewriteEnabled: boolean
+  ErrorMessageRewriteRules: string
   DefaultCollapseSidebar: boolean
   DemoSiteEnabled: boolean
   SelfUseModeEnabled: boolean

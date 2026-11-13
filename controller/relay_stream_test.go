@@ -301,6 +301,38 @@ func TestRelayStreamErrorAfterKeepAlive(t *testing.T) {
 	}
 }
 
+func TestRelayStreamErrorRewrite(t *testing.T) {
+	common.OptionMapRWMutex.Lock()
+	original := common.OptionMap
+	common.OptionMap = map[string]string{
+		common.OptionErrorMessageRewriteEnabled: "true",
+		common.OptionErrorMessageRewriteRules:   `[{"enabled":true,"source":"upstream","patterns":["provider rejected"],"replace":"Please try later"}]`,
+	}
+	common.OptionMapRWMutex.Unlock()
+	t.Cleanup(func() {
+		common.OptionMapRWMutex.Lock()
+		common.OptionMap = original
+		common.OptionMapRWMutex.Unlock()
+	})
+	for _, format := range []types.RelayFormat{types.RelayFormatClaude, types.RelayFormatOpenAI} {
+		t.Run(string(format), func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/stream", nil)
+			helper.SetEventStreamHeaders(c)
+			apiError := types.WithOpenAIError(types.OpenAIError{Message: "provider rejected (request id: req_123)", Type: "rate_limit", Code: "rate_limit"}, http.StatusTooManyRequests)
+			writeRelayStreamError(c, format, apiError)
+			assert.Contains(t, recorder.Body.String(), "Please try later (request id: req_123)")
+			assert.NotContains(t, recorder.Body.String(), "provider rejected")
+			assert.Contains(t, recorder.Body.String(), "rate_limit")
+			assert.Equal(t, "provider rejected (request id: req_123)", apiError.Error())
+			status, ok := common.GetContextKeyType[*relaycommon.StreamStatus](c, constant.ContextKeyResponseStreamStatus)
+			require.True(t, ok)
+			assert.Equal(t, http.StatusTooManyRequests, status.OutcomeSnapshot().ErrorStatus)
+		})
+	}
+}
+
 func TestStreamKeepAliveCancellation(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)

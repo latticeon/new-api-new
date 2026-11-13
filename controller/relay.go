@@ -85,7 +85,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		var err error
 		ws, err = upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
-			helper.WssError(c, ws, types.NewError(err, types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry()).ToOpenAIError())
+			helper.WssError(c, ws, service.ClientOpenAIError(types.NewError(err, types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())))
 			return
 		}
 		defer ws.Close()
@@ -116,15 +116,15 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			}
 			switch relayFormat {
 			case types.RelayFormatOpenAIRealtime:
-				helper.WssError(c, ws, newAPIError.ToOpenAIError(upstreamURLs...))
+				helper.WssError(c, ws, service.ClientOpenAIError(newAPIError, upstreamURLs...))
 			case types.RelayFormatClaude:
 				c.JSON(newAPIError.StatusCode, gin.H{
 					"type":  "error",
-					"error": newAPIError.ToClaudeError(upstreamURLs...),
+					"error": service.ClientClaudeError(newAPIError, upstreamURLs...),
 				})
 			default:
 				c.JSON(newAPIError.StatusCode, gin.H{
-					"error": newAPIError.ToOpenAIError(upstreamURLs...),
+					"error": service.ClientOpenAIError(newAPIError, upstreamURLs...),
 				})
 			}
 		}
@@ -279,10 +279,10 @@ func writeRelayStreamError(c *gin.Context, format types.RelayFormat, apiError *t
 	status.MarkFailed(string(apiError.GetErrorCode()), string(apiError.GetErrorType()), apiError.StatusCode)
 	upstreamURLs := common.UpstreamAddresses(c)
 	if format == types.RelayFormatClaude {
-		_ = helper.ClaudeData(c, dto.ClaudeResponse{Type: "error", Error: apiError.ToClaudeError(upstreamURLs...)})
+		_ = helper.ClaudeData(c, dto.ClaudeResponse{Type: "error", Error: service.ClientClaudeError(apiError, upstreamURLs...)})
 		return
 	}
-	_ = helper.ObjectData(c, gin.H{"error": apiError.ToOpenAIError(upstreamURLs...)})
+	_ = helper.ObjectData(c, gin.H{"error": service.ClientOpenAIError(apiError, upstreamURLs...)})
 	helper.Done(c)
 }
 

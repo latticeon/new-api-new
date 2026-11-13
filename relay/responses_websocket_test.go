@@ -562,6 +562,36 @@ func TestBuildResponsesWSErrorPayloadIncludesStatus(t *testing.T) {
 	}
 }
 
+func TestBuildResponsesWSErrorPayloadRewritesOnlyMessage(t *testing.T) {
+	common.OptionMapRWMutex.Lock()
+	original := common.OptionMap
+	common.OptionMap = map[string]string{
+		common.OptionErrorMessageRewriteEnabled: "true",
+		common.OptionErrorMessageRewriteRules:   `[{"enabled":true,"source":"local","patterns":["model is required"],"replace":"Select a model"}]`,
+	}
+	common.OptionMapRWMutex.Unlock()
+	t.Cleanup(func() {
+		common.OptionMapRWMutex.Lock()
+		common.OptionMap = original
+		common.OptionMapRWMutex.Unlock()
+	})
+	apiErr := newResponsesWSInvalidRequestError(errors.New("model is required"))
+	payload, err := buildResponsesWSErrorPayload("evt_err", "stream_1", apiErr)
+	require.NoError(t, err)
+	var data struct {
+		Status   int               `json:"status"`
+		EventID  string            `json:"event_id"`
+		StreamID string            `json:"stream_id"`
+		Error    types.OpenAIError `json:"error"`
+	}
+	require.NoError(t, common.Unmarshal(payload, &data))
+	assert.Equal(t, "Select a model", data.Error.Message)
+	assert.Equal(t, http.StatusBadRequest, data.Status)
+	assert.Equal(t, "evt_err", data.EventID)
+	assert.Equal(t, "stream_1", data.StreamID)
+	assert.Equal(t, "model is required", apiErr.Error())
+}
+
 func TestResponsesWSInvalidRequestErrorUsesBadRequestStatus(t *testing.T) {
 	payload, err := buildResponsesWSErrorPayload("", "", newResponsesWSInvalidRequestError(errors.New("bad event")))
 	if err != nil {
