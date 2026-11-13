@@ -1,12 +1,15 @@
 package service
 
 import (
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"gorm.io/gorm"
 )
+
+const ClientLoginMethodPrefix = "client:"
 
 const LoginVerificationTTL = 5 * time.Minute
 
@@ -29,6 +32,7 @@ type LegacyGitHubMigration struct {
 type loginFlowPayload struct {
 	AuthVersion int64  `json:"auth_version"`
 	LoginMethod string `json:"login_method"`
+	DeviceName  string `json:"device_name,omitempty"`
 	// The GitHub binding rewrite waiting for this verification, if any.
 	PendingGitHubID       string `json:"pending_github_id,omitempty"`
 	PendingGitHubLegacyID string `json:"pending_github_legacy_id,omitempty"`
@@ -42,7 +46,7 @@ type LoginVerification struct {
 	payload loginFlowPayload
 }
 
-func StartLoginVerification(user *model.User, loginMethod string, migration *LegacyGitHubMigration) (*LoginChallenge, error) {
+func StartLoginVerification(user *model.User, loginMethod string, migration *LegacyGitHubMigration, userAgent ...string) (*LoginChallenge, error) {
 	if user == nil || user.Id <= 0 || user.AuthVersion <= 0 || loginMethod == "" {
 		return nil, model.ErrAuthFlowInvalid
 	}
@@ -70,6 +74,9 @@ func StartLoginVerification(user *model.User, loginMethod string, migration *Leg
 		return nil, ErrVerificationUnavailable
 	}
 	payload := loginFlowPayload{AuthVersion: state.AuthVersion, LoginMethod: loginMethod}
+	if strings.HasPrefix(loginMethod, ClientLoginMethodPrefix) && len(userAgent) > 0 {
+		payload.DeviceName = truncateAuthMetadata(userAgent[0], 512)
+	}
 	if migration != nil {
 		payload.PendingGitHubID, payload.PendingGitHubLegacyID = migration.GitHubID, migration.LegacyID
 	}
@@ -150,6 +157,9 @@ func VerifyLoginCode(token, code, ip, userAgent string) (*AuthBundle, *LegacyGit
 func CompleteLoginVerification(token string, verification *LoginVerification, method, ip, userAgent string) (*AuthBundle, *LegacyGitHubMigration, error) {
 	if verification == nil || verification.Flow == nil || verification.State == nil {
 		return nil, nil, model.ErrAuthFlowInvalid
+	}
+	if strings.HasPrefix(verification.payload.LoginMethod, ClientLoginMethodPrefix) {
+		userAgent = verification.payload.DeviceName
 	}
 	session, refreshSecret, err := newLoginSession(verification.State.UserID, verification.payload.AuthVersion, verification.payload.LoginMethod, ip, userAgent)
 	if err != nil {

@@ -96,9 +96,12 @@ func PreWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usag
 		return 0, err
 	}
 
-	token, err := model.GetTokenByKey(strings.TrimPrefix(relayInfo.TokenKey, "sk-"), false)
-	if err != nil {
-		return 0, err
+	var token *model.Token
+	if !relayInfo.IsPlayground {
+		token, err = model.GetTokenByKey(strings.TrimPrefix(relayInfo.TokenKey, "sk-"), false)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	modelName := relayInfo.OriginModelName
@@ -144,7 +147,7 @@ func PreWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usag
 		return 0, fmt.Errorf("user quota is not enough, user quota: %s, need quota: %s", logger.FormatQuota(userQuota), logger.FormatQuota(quota))
 	}
 
-	if !token.UnlimitedQuota && token.RemainQuota < quota {
+	if token != nil && !token.UnlimitedQuota && token.RemainQuota < quota {
 		return 0, fmt.Errorf("token quota is not enough, token remain quota: %s, need quota: %s", logger.FormatQuota(token.RemainQuota), logger.FormatQuota(quota))
 	}
 

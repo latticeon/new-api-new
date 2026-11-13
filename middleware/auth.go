@@ -204,17 +204,32 @@ func authenticateDashboardRequest(c *gin.Context) (*model.UserBase, service.Auth
 
 func classifyDashboardCredential(c *gin.Context) (*model.UserBase, service.AuthIdentity, dashboardCredentialKind, error) {
 	raw, ok := authorizationToken(c.GetHeader("Authorization"))
+	clientHeader, hasClientHeader := c.Request.Header[http.CanonicalHeaderKey(ClientSessionHeader)]
+	if hasClientHeader {
+		if len(clientHeader) != 1 || strings.TrimSpace(clientHeader[0]) == "" || c.GetHeader("Authorization") != "" {
+			return nil, service.AuthIdentity{}, dashboardCredentialInternal, service.ErrAuthTokenInvalid
+		}
+		raw, ok = strings.TrimSpace(clientHeader[0]), true
+	}
 	if !ok {
 		return nil, service.AuthIdentity{}, dashboardCredentialUnmatched, nil
 	}
 	identity, internal, err := service.ParseDashboardAccessToken(raw)
+	if hasClientHeader && !internal {
+		return nil, service.AuthIdentity{}, dashboardCredentialInternal, service.ErrAuthTokenInvalid
+	}
 	if internal {
 		if err != nil {
 			return nil, service.AuthIdentity{}, dashboardCredentialInternal, err
 		}
-		_, user, err := service.ValidateLoginSession(identity)
+		session, user, err := service.ValidateLoginSession(identity)
 		if err != nil {
 			return nil, service.AuthIdentity{}, dashboardCredentialInternal, err
+		}
+		if hasClientHeader || strings.HasPrefix(session.LoginMethod, service.ClientLoginMethodPrefix) {
+			if err := validateClientSessionRequest(c, session, user); err != nil {
+				return nil, service.AuthIdentity{}, dashboardCredentialInternal, err
+			}
 		}
 		return user, identity, dashboardCredentialInternal, nil
 	}
@@ -383,6 +398,10 @@ func abortWithWebMessage(c *gin.Context, status int, code string, message *commo
 }
 
 func writeDashboardAuthError(c *gin.Context, err error) {
+	if errors.Is(err, errClientSessionRouteDenied) {
+		abortWithWebMessage(c, http.StatusForbidden, "AUTH_CLIENT_ROUTE_DENIED", common.NewMessage("Unauthorized, insufficient privileges"))
+		return
+	}
 	if errors.Is(err, model.ErrAccessTokenExpired) {
 		abortWithWebMessage(c, http.StatusUnauthorized, "ACCESS_TOKEN_EXPIRED", common.NewMessage("Unauthorized, the access token has expired"))
 		return
@@ -427,6 +446,10 @@ func WssAuth(c *gin.Context) {
 // Used for endpoints that need to be accessible from both the dashboard and API clients.
 func TokenOrUserAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
+		if _, present := c.Request.Header[http.CanonicalHeaderKey(ClientSessionHeader)]; present {
+			authHelper(c, common.RoleCommonUser)
+			return
+		}
 		raw, ok := authorizationToken(c.GetHeader("Authorization"))
 		if ok {
 			identity, internal, err := service.ParseDashboardAccessToken(raw)
@@ -438,10 +461,16 @@ func TokenOrUserAuth() func(c *gin.Context) {
 				writeDashboardAuthError(c, err)
 				return
 			}
-			_, user, err := service.ValidateLoginSession(identity)
+			session, user, err := service.ValidateLoginSession(identity)
 			if err != nil {
 				writeDashboardAuthError(c, err)
 				return
+			}
+			if strings.HasPrefix(session.LoginMethod, service.ClientLoginMethodPrefix) {
+				if err := validateClientSessionRequest(c, session, user); err != nil {
+					writeDashboardAuthError(c, err)
+					return
+				}
 			}
 			setDashboardAuthContext(c, user, identity, false)
 			c.Next()
@@ -527,6 +556,29 @@ func TokenAuthReadOnly() func(c *gin.Context) {
 
 func TokenAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
+		// Normalize all API-key transports first. If one is supplied alongside a
+		// client header, reject ambiguity instead of silently upgrading a key.
+		clientHeader, hasClientHeader := c.Request.Header[http.CanonicalHeaderKey(ClientSessionHeader)]
+		if hasClientHeader {
+			_, wsKey := apiKeyFromWebSocketSubprotocol(strings.Join(c.Request.Header.Values("Sec-WebSocket-Protocol"), ","))
+			if len(clientHeader) != 1 || strings.TrimSpace(clientHeader[0]) == "" || c.GetHeader("Authorization") != "" || c.GetHeader("x-api-key") != "" || c.GetHeader("x-goog-api-key") != "" || c.GetHeader("mj-api-secret") != "" || c.Query("key") != "" || wsKey {
+				rejectMixedClientCredentials(c)
+				return
+			}
+			clientRelayAuth(c, strings.TrimSpace(clientHeader[0]))
+			return
+		}
+		if raw, ok := authorizationToken(c.GetHeader("Authorization")); ok {
+			if _, internal, _ := service.ParseDashboardAccessToken(raw); internal {
+				_, wsKey := apiKeyFromWebSocketSubprotocol(strings.Join(c.Request.Header.Values("Sec-WebSocket-Protocol"), ","))
+				if c.GetHeader("x-api-key") != "" || c.GetHeader("x-goog-api-key") != "" || c.GetHeader("mj-api-secret") != "" || c.Query("key") != "" || wsKey {
+					rejectMixedClientCredentials(c)
+					return
+				}
+				clientRelayAuth(c, raw)
+				return
+			}
+		}
 		// 先检测是否为ws
 		applyWebSocketSubprotocolAuthorization(c.Request.Header)
 		// 检查path包含/v1/messages 或 /v1/models

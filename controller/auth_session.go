@@ -44,6 +44,42 @@ func RefreshAuth(c *gin.Context) {
 	})
 }
 
+// ClientRefreshAuth intentionally reads no browser cookies or bearer identity.
+func ClientRefreshAuth(c *gin.Context) {
+	setAuthNoStore(c)
+	var request struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if c.ShouldBindJSON(&request) != nil || strings.TrimSpace(request.RefreshToken) == "" {
+		writeAuthSessionError(c, service.ErrRefreshTokenInvalid)
+		return
+	}
+	bundle, user, err := service.RefreshClientLoginSession(request.RefreshToken, c.GetHeader("X-Auth-Session"), c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		writeAuthSessionError(c, err)
+		return
+	}
+	data := authRotationData(bundle)
+	data["user"] = buildSelfUserData(user)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": data})
+}
+
+func ClientAuthLogout(c *gin.Context) {
+	setAuthNoStore(c)
+	var request struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if c.ShouldBindJSON(&request) != nil || strings.TrimSpace(request.RefreshToken) == "" {
+		writeAuthSessionError(c, service.ErrRefreshTokenInvalid)
+		return
+	}
+	if err := service.RevokeClientLoginSession(request.RefreshToken, c.GetHeader("X-Auth-Session")); err != nil {
+		writeAuthSessionError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
+}
+
 func AuthLogout(c *gin.Context) {
 	setAuthNoStore(c)
 	expectedSID := strings.TrimSpace(c.GetHeader("X-Auth-Session"))
@@ -185,12 +221,16 @@ func authRotationData(bundle *service.AuthBundle) gin.H {
 	if bundle == nil {
 		return gin.H{}
 	}
-	return gin.H{
+	data := gin.H{
 		"access_token":      bundle.AccessToken,
 		"token_type":        bundle.TokenType,
 		"access_expires_at": bundle.AccessExpiresAt,
 		"session":           bundle.Session,
 	}
+	if bundle.ClientSession && bundle.RefreshToken != "" {
+		data["refresh_token"] = bundle.RefreshToken
+	}
+	return data
 }
 
 func dashboardBearer(header string) (string, bool) {

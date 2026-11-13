@@ -55,6 +55,10 @@ var accessTokenExemptRoutes = []string{
 	"POST /api/user/auth/refresh",
 	"POST /api/user/auth/logout",
 
+	// Explicit refresh-secret endpoints, not dashboard Bearer authentication.
+	"POST /api/user/auth/client/refresh",
+	"POST /api/user/auth/client/logout",
+
 	// Payment callbacks.
 	"POST /api/stripe/webhook",
 	"POST /api/creem/webhook",

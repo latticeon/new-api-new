@@ -674,6 +674,12 @@ func genBaseRelayInfo(c *gin.Context, request dto.Request) *RelayInfo {
 		info.RelayMode = c.GetInt("relay_mode")
 	}
 
+	// Verified client login sessions use the existing user-only billing path.
+	// This flag is set exclusively by relay authentication, never client JSON.
+	if c.GetBool("client_session_relay") {
+		info.IsPlayground = true
+	}
+
 	if strings.HasPrefix(c.Request.URL.Path, "/pg") {
 		info.IsPlayground = true
 		info.RequestURLPath = strings.TrimPrefix(info.RequestURLPath, "/pg")

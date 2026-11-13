@@ -31,6 +31,8 @@ type LoginRequest struct {
 	Password          string `json:"password"`
 	PasswordEncrypted string `json:"password_encrypted"`
 	EncryptionKeyID   string `json:"encryption_key_id"`
+	IssueSession      bool   `json:"issue_session"`
+	DeviceName        string `json:"device_name"`
 }
 
 func GetPasswordEncryptionKey(c *gin.Context) {
@@ -96,6 +98,18 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	if loginRequest.IssueSession {
+		c.Set("login_method", service.ClientLoginMethodPrefix+"password")
+		device := strings.TrimSpace(loginRequest.DeviceName)
+		if len(device) > 128 {
+			common.ApiErrorT(c, "Invalid parameters")
+			return
+		}
+		if device != "" {
+			// This is display metadata only, never a client identity or trust signal.
+			c.Request.Header.Set("User-Agent", device)
+		}
+	}
 	setupLogin(&user, nil, c)
 }
 
@@ -148,7 +162,7 @@ func recordLoginAudit(user *model.User, c *gin.Context) {
 // pending legacy GitHub binding rewrite travels inside the challenge and is
 // written only when the verification completes.
 func setupLogin(user *model.User, migration *service.LegacyGitHubMigration, c *gin.Context) {
-	challenge, err := service.StartLoginVerification(user, loginMethodFromContext(c), migration)
+	challenge, err := service.StartLoginVerification(user, loginMethodFromContext(c), migration, c.Request.UserAgent())
 	if err != nil {
 		writeSecurityOperationError(c, err)
 		return
@@ -198,20 +212,14 @@ func setupLoginAtAuthVersion(user *model.User, expectedAuthVersion int64, c *gin
 func writeLoginResponse(c *gin.Context, user *model.User, bundle *service.AuthBundle) {
 	c.Set("login_method", bundle.Session.LoginMethod)
 	model.UpdateUserLastLoginAt(user.Id)
-	service.WriteRefreshCookie(c, bundle.RefreshToken)
+	if !bundle.ClientSession {
+		service.WriteRefreshCookie(c, bundle.RefreshToken)
+	}
 	setAuthNoStore(c)
 	recordLoginAudit(user, c)
-	c.JSON(http.StatusOK, gin.H{
-		"message": "",
-		"success": true,
-		"data": gin.H{
-			"access_token":      bundle.AccessToken,
-			"token_type":        bundle.TokenType,
-			"access_expires_at": bundle.AccessExpiresAt,
-			"session":           bundle.Session,
-			"user":              buildSelfUserData(user),
-		},
-	})
+	data := authRotationData(bundle)
+	data["user"] = buildSelfUserData(user)
+	c.JSON(http.StatusOK, gin.H{"message": "", "success": true, "data": data})
 }
 
 func Register(c *gin.Context) {
@@ -784,6 +792,16 @@ func UpdateSelf(c *gin.Context) {
 	if err := common.DecodeJson(c.Request.Body, &requestData); err != nil {
 		common.ApiErrorT(c, "Invalid parameters")
 		return
+	}
+
+	// Client profile edits do not grant access to password or security settings.
+	if c.GetBool("client_session") {
+		for key := range requestData {
+			if key != "username" && key != "display_name" && key != "language" && key != "sidebar_modules" {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "code": "AUTH_CLIENT_ROUTE_DENIED", "message": "Forbidden"})
+				return
+			}
+		}
 	}
 
 	passwordRequested := false

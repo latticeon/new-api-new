@@ -24,10 +24,14 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	relaydto "github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/fxamacker/cbor/v2"
@@ -88,6 +92,14 @@ func setupSecurityEnrollmentTest(t *testing.T) (*model.User, service.AuthIdentit
 		dbType = common.DatabaseTypePostgreSQL
 	}
 	common.SetDatabaseTypes(dbType, dbType)
+	// Initialize dialect-specific quoted columns through the public startup path.
+	// No migrations or new connections are needed for this isolated fixture.
+	previousMaster := common.IsMasterNode
+	common.IsMasterNode = false
+	t.Setenv("LOG_SQL_DSN", "")
+	require.NoError(t, model.InitLogDB())
+	common.IsMasterNode = previousMaster
+	model.LOG_DB = logDB
 	common.PasswordLoginEncryptionEnabled = false
 	common.RedisEnabled = false
 	common.SessionSecret = "security-enrollment-test-secret"
@@ -100,6 +112,9 @@ func setupSecurityEnrollmentTest(t *testing.T) (*model.User, service.AuthIdentit
 		*system_setting.GetPasskeySettings() = previousSettings
 		connection, err := db.DB()
 		if err == nil {
+			_ = connection.Close()
+		}
+		if connection, err := logDB.DB(); err == nil {
 			_ = connection.Close()
 		}
 	})
@@ -1880,4 +1895,298 @@ func TestSecurityEnrollmentRejectsChangedFirstFactorPolicy(t *testing.T) {
 			})
 		}
 	}
+}
+
+type clientLoginTestResponse struct {
+	Success bool `json:"success"`
+	Data    struct {
+		AccessToken         string                   `json:"access_token"`
+		RefreshToken        string                   `json:"refresh_token"`
+		FlowToken           string                   `json:"flow_token"`
+		RequireVerification bool                     `json:"require_verification"`
+		Session             service.LoginSessionView `json:"session"`
+	} `json:"data"`
+}
+
+func clientSessionTestRequest(t *testing.T, router *gin.Engine, method, path, body string, headers map[string]string) (*httptest.ResponseRecorder, clientLoginTestResponse) {
+	t.Helper()
+	request := httptest.NewRequest(method, path, strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	for key, value := range headers {
+		request.Header.Set(key, value)
+	}
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	var parsed clientLoginTestResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &parsed), response.Body.String())
+	return response, parsed
+}
+
+func TestClientSessionLoginAndMFA(t *testing.T) {
+	for _, encrypted := range []bool{false, true} {
+		for _, mfa := range []bool{false, true} {
+			t.Run(fmt.Sprintf("encrypted=%t/mfa=%t", encrypted, mfa), func(t *testing.T) {
+				user, _ := setupSecurityEnrollmentTest(t)
+				old := common.PasswordLoginEnabled
+				common.PasswordLoginEnabled = true
+				t.Cleanup(func() { common.PasswordLoginEnabled = old })
+				router := gin.New()
+				router.POST("/api/user/login", Login)
+				router.POST("/api/user/login/verify", VerifyLogin)
+				input := map[string]any{"username": user.Username, "password": "enrollment-password", "issue_session": true, "device_name": "Desktop client"}
+				if encrypted {
+					keyID, publicPEM := common.PasswordEncryptionPublicKey()
+					if keyID == "" {
+						privatePEM, err := common.GeneratePasswordEncryptionPrivateKey()
+						require.NoError(t, err)
+						require.NoError(t, common.LoadPasswordEncryptionPrivateKey(privatePEM))
+						keyID, publicPEM = common.PasswordEncryptionPublicKey()
+					}
+					block, _ := pem.Decode([]byte(publicPEM))
+					require.NotNil(t, block)
+					public, err := x509.ParsePKIXPublicKey(block.Bytes)
+					require.NoError(t, err)
+					ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, public.(*rsa.PublicKey), []byte("enrollment-password"), nil)
+					require.NoError(t, err)
+					common.PasswordLoginEncryptionEnabled = true
+					bad, err := common.Marshal(input)
+					require.NoError(t, err)
+					_, denied := clientSessionTestRequest(t, router, "POST", "/api/user/login", string(bad), nil)
+					assert.False(t, denied.Success)
+					input["password_encrypted"], input["encryption_key_id"] = base64.StdEncoding.EncodeToString(ciphertext), keyID
+				}
+				if mfa {
+					require.NoError(t, model.DB.Create(&model.TwoFA{UserId: user.Id, Secret: "JBSWY3DPEHPK3PXP", IsEnabled: true}).Error)
+				}
+				encoded, err := common.Marshal(input)
+				require.NoError(t, err)
+				response, login := clientSessionTestRequest(t, router, "POST", "/api/user/login", string(encoded), nil)
+				require.True(t, login.Success, response.Body.String())
+				assert.Empty(t, response.Header().Values("Set-Cookie"))
+				assert.Equal(t, "no-store", response.Header().Get("Cache-Control"))
+				if mfa {
+					require.True(t, login.Data.RequireVerification)
+					assert.Empty(t, login.Data.AccessToken)
+					assert.Empty(t, login.Data.RefreshToken)
+					flow := login.Data.FlowToken
+					_, denied := clientSessionTestRequest(t, router, "POST", "/api/user/login/verify", fmt.Sprintf(`{"flow_token":%q,"method":"password","code":"enrollment-password"}`, flow), nil)
+					assert.False(t, denied.Success)
+					code, err := totp.GenerateCode("JBSWY3DPEHPK3PXP", time.Now())
+					require.NoError(t, err)
+					body := fmt.Sprintf(`{"flow_token":%q,"method":"2fa","code":%q}`, flow, code)
+					response, login = clientSessionTestRequest(t, router, "POST", "/api/user/login/verify", body, nil)
+					require.True(t, login.Success, response.Body.String())
+					assert.Empty(t, response.Header().Values("Set-Cookie"))
+					_, replay := clientSessionTestRequest(t, router, "POST", "/api/user/login/verify", body, nil)
+					assert.False(t, replay.Success)
+				}
+				require.NotEmpty(t, login.Data.RefreshToken)
+				assert.NotEmpty(t, login.Data.AccessToken)
+				assert.Equal(t, "client:password", login.Data.Session.LoginMethod)
+				assert.Equal(t, "Desktop client", login.Data.Session.UserAgent)
+				assert.InDelta(t, time.Now().Add(service.LoginSessionTTL).Unix(), login.Data.Session.ExpiresAt, 10)
+				input["issue_session"] = false
+				encoded, err = common.Marshal(input)
+				require.NoError(t, err)
+				response, web := clientSessionTestRequest(t, router, "POST", "/api/user/login", string(encoded), nil)
+				require.True(t, web.Success, response.Body.String())
+				assert.Empty(t, web.Data.RefreshToken)
+				if mfa {
+					require.True(t, web.Data.RequireVerification)
+					code, err := totp.GenerateCode("JBSWY3DPEHPK3PXP", time.Now())
+					require.NoError(t, err)
+					response, web = clientSessionTestRequest(t, router, "POST", "/api/user/login/verify", fmt.Sprintf(`{"flow_token":%q,"method":"2fa","code":%q,"issue_session":true}`, web.Data.FlowToken, code), nil)
+					require.True(t, web.Success, response.Body.String())
+				}
+				assert.Empty(t, web.Data.RefreshToken)
+				assert.Equal(t, "password", web.Data.Session.LoginMethod)
+				assert.NotEmpty(t, response.Result().Cookies())
+			})
+		}
+	}
+}
+
+func TestClientSessionRefreshIsolationAndRevocation(t *testing.T) {
+	for _, scenario := range []string{"rotate and logout", "replay", "expired", "revoked", "disabled", "auth version"} {
+		t.Run(scenario, func(t *testing.T) {
+			user, _ := setupSecurityEnrollmentTest(t)
+			client, err := service.CreateLoginSession(user.Id, "client:password", "127.0.0.1", "client")
+			require.NoError(t, err)
+			web, err := service.CreateLoginSession(user.Id, "password", "127.0.0.1", "web")
+			require.NoError(t, err)
+			router := gin.New()
+			router.POST("/api/user/auth/client/refresh", ClientRefreshAuth)
+			router.POST("/api/user/auth/client/logout", ClientAuthLogout)
+			router.POST("/api/user/auth/refresh", RefreshAuth)
+			for _, path := range []string{"refresh", "logout"} {
+				response, _ := clientSessionTestRequest(t, router, "POST", "/api/user/auth/client/"+path, `{}`, map[string]string{"Cookie": service.RefreshCookieName + "=" + client.RefreshToken, "Authorization": "Bearer " + client.AccessToken})
+				assert.Equal(t, http.StatusUnauthorized, response.Code)
+				assert.Empty(t, response.Header().Values("Set-Cookie"))
+				response, _ = clientSessionTestRequest(t, router, "POST", "/api/user/auth/client/"+path, fmt.Sprintf(`{"refresh_token":%q}`, web.RefreshToken), nil)
+				assert.Equal(t, http.StatusUnauthorized, response.Code)
+			}
+			response, _ := clientSessionTestRequest(t, router, "POST", "/api/user/auth/refresh", `{}`, map[string]string{"Cookie": service.RefreshCookieName + "=" + client.RefreshToken})
+			assert.Equal(t, http.StatusUnauthorized, response.Code)
+			switch scenario {
+			case "expired":
+				require.NoError(t, model.DB.Model(&model.UserSession{}).Where("sid = ?", client.Session.SID).Update("expires_at", time.Now().Unix()-1).Error)
+			case "revoked":
+				_, err = model.RevokeUserSession(user.Id, client.Session.SID, "test")
+				require.NoError(t, err)
+			case "disabled":
+				require.NoError(t, model.DB.Model(user).Update("status", common.UserStatusDisabled).Error)
+				require.NoError(t, model.PublishUserAuthCache(user.Id))
+			case "auth version":
+				_, err = model.BumpUserAuthVersion(user.Id)
+				require.NoError(t, err)
+			}
+			if scenario != "rotate and logout" && scenario != "replay" {
+				router.POST("/v1/chat/completions", middleware.TokenAuth(), func(c *gin.Context) { t.Error("inactive session reached relay"); c.JSON(200, gin.H{"success": true}) })
+				denied, _ := clientSessionTestRequest(t, router, "POST", "/v1/chat/completions", `{}`, map[string]string{"Authorization": "Bearer " + client.AccessToken})
+				assert.Equal(t, http.StatusUnauthorized, denied.Code)
+			}
+			body := fmt.Sprintf(`{"refresh_token":%q}`, client.RefreshToken)
+			response, refreshed := clientSessionTestRequest(t, router, "POST", "/api/user/auth/client/refresh", body, nil)
+			assert.Empty(t, response.Header().Values("Set-Cookie"))
+			if scenario != "rotate and logout" && scenario != "replay" {
+				assert.Equal(t, http.StatusUnauthorized, response.Code)
+				assert.Empty(t, refreshed.Data.RefreshToken)
+				return
+			}
+			require.True(t, refreshed.Success, response.Body.String())
+			assert.NotEqual(t, client.RefreshToken, refreshed.Data.RefreshToken)
+			assert.Equal(t, client.Session.ExpiresAt, refreshed.Data.Session.ExpiresAt)
+			if scenario == "replay" {
+				_, race := clientSessionTestRequest(t, router, "POST", "/api/user/auth/client/refresh", body, nil)
+				require.True(t, race.Success)
+				assert.Equal(t, refreshed.Data.RefreshToken, race.Data.RefreshToken)
+				require.NoError(t, model.DB.Model(&model.UserSession{}).Where("sid = ?", client.Session.SID).Update("previous_valid_until", time.Now().Unix()-1).Error)
+				response, _ = clientSessionTestRequest(t, router, "POST", "/api/user/auth/client/refresh", body, nil)
+				assert.Equal(t, http.StatusUnauthorized, response.Code)
+			} else {
+				response, _ = clientSessionTestRequest(t, router, "POST", "/api/user/auth/client/logout", fmt.Sprintf(`{"refresh_token":%q}`, refreshed.Data.RefreshToken), nil)
+				require.Equal(t, http.StatusOK, response.Code)
+			}
+			identity, err := service.ParseAccessToken(refreshed.Data.AccessToken)
+			require.NoError(t, err)
+			_, _, err = service.ValidateLoginSession(identity)
+			assert.ErrorIs(t, err, service.ErrLoginSessionRevoked)
+			response, _ = clientSessionTestRequest(t, router, "POST", "/api/user/auth/client/refresh", fmt.Sprintf(`{"refresh_token":%q}`, refreshed.Data.RefreshToken), nil)
+			assert.Equal(t, http.StatusUnauthorized, response.Code)
+		})
+	}
+}
+
+func TestClientSessionAllowlistAndRelay(t *testing.T) {
+	user, _ := setupSecurityEnrollmentTest(t)
+	require.NoError(t, model.DB.Model(user).Updates(map[string]any{"role": common.RoleRootUser, "quota": 1000}).Error)
+	require.NoError(t, model.DB.AutoMigrate(&model.Token{}, &model.Channel{}, &model.Ability{}))
+	previousMemory := common.MemoryCacheEnabled
+	common.MemoryCacheEnabled = false
+	t.Cleanup(func() { common.MemoryCacheEnabled = previousMemory })
+	channel := &model.Channel{Type: constant.ChannelTypeOpenAI, Name: "client-test", Key: "upstream-secret", Models: "client-model", Group: "default", Status: common.ChannelStatusEnabled}
+	require.NoError(t, model.DB.Create(channel).Error)
+	require.NoError(t, model.DB.Create(&model.Ability{Group: "default", Model: "client-model", ChannelId: channel.Id, Enabled: true}).Error)
+	require.NoError(t, model.PublishUserAuthCache(user.Id))
+	client, err := service.CreateLoginSession(user.Id, "client:password", "127.0.0.1", "client")
+	require.NoError(t, err)
+	web, err := service.CreateLoginSession(user.Id, "password", "127.0.0.1", "web")
+	require.NoError(t, err)
+	router := gin.New()
+	for _, route := range []struct {
+		method, path string
+		status       int
+	}{
+		{"GET", "/api/user/self", 200}, {"PUT", "/api/user/self", 200}, {"GET", "/api/log/self", 200}, {"GET", "/api/user/sessions", 200}, {"GET", "/api/user/checkin", 200}, {"POST", "/api/user/topup", 200}, {"GET", "/api/subscription/self", 200},
+		{"POST", "/api/user/access_tokens", 403}, {"POST", "/api/user/2fa/setup", 403}, {"GET", "/api/user/search", 403}, {"PUT", "/api/option/", 403}, {"POST", "/api/token/", 403},
+	} {
+		router.Handle(route.method, route.path, middleware.UserAuth(), func(c *gin.Context) { c.JSON(200, gin.H{"success": true}) })
+		response, _ := clientSessionTestRequest(t, router, route.method, route.path, `{}`, map[string]string{"Authorization": "Bearer " + client.AccessToken})
+		assert.Equal(t, route.status, response.Code, route.path)
+	}
+	router.POST("/v1/chat/completions", middleware.TokenAuth(), middleware.Distribute(), func(c *gin.Context) {
+		assert.Equal(t, user.Id, c.GetInt("id"))
+		assert.Equal(t, "default", common.GetContextKeyString(c, constant.ContextKeyUsingGroup))
+		assert.Zero(t, c.GetInt("token_id"))
+		assert.Empty(t, c.GetString("token_key"))
+		assert.Equal(t, channel.Id, c.GetInt("channel_id"))
+		info, err := relaycommon.GenRelayInfo(c, types.RelayFormatOpenAI, nil, nil)
+		require.NoError(t, err)
+		assert.True(t, info.IsPlayground)
+		assert.NotContains(t, info.RequestHeaders, "Authorization")
+		assert.NotContains(t, info.RequestHeaders, middleware.ClientSessionHeader)
+		assert.NotContains(t, info.RequestHeaders, "Cookie")
+		assert.Equal(t, "/v1/chat/completions", info.RequestURLPath)
+		info.UserSetting.BillingPreference = "wallet_only"
+		info.ForcePreConsume = true
+		_, insufficient := service.NewBillingSession(c, info, 1001)
+		require.NotNil(t, insufficient)
+		billing, apiErr := service.NewBillingSession(c, info, 120)
+		require.Nil(t, apiErr)
+		require.NoError(t, billing.Settle(100))
+		require.NoError(t, billing.Settle(100))
+		c.JSON(200, gin.H{"success": true})
+	})
+	for _, headers := range []map[string]string{{"Authorization": "Bearer " + client.AccessToken}, {middleware.ClientSessionHeader: client.AccessToken}} {
+		response, _ := clientSessionTestRequest(t, router, "POST", "/v1/chat/completions", `{"model":"client-model","group":"admin"}`, headers)
+		require.Equal(t, 200, response.Code, response.Body.String())
+	}
+	quota, err := model.GetUserQuota(user.Id, true)
+	require.NoError(t, err)
+	assert.Equal(t, 800, quota)
+	router.POST("/v1/realtime", middleware.TokenAuth(), func(c *gin.Context) {
+		info, err := relaycommon.GenRelayInfo(c, types.RelayFormatOpenAI, nil, nil)
+		require.NoError(t, err)
+		info.OriginModelName = "gpt-4o"
+		charged, err := service.PreWssConsumeQuota(c, info, &relaydto.RealtimeUsage{InputTokenDetails: relaydto.InputTokenDetails{TextTokens: 1}})
+		require.NoError(t, err)
+		assert.Positive(t, charged)
+		after, err := model.GetUserQuota(user.Id, true)
+		require.NoError(t, err)
+		assert.Equal(t, quota-charged, after)
+		c.JSON(200, gin.H{"success": true})
+	})
+	realtime, _ := clientSessionTestRequest(t, router, "POST", "/v1/realtime", `{}`, map[string]string{"Authorization": "Bearer " + client.AccessToken})
+	assert.Equal(t, http.StatusOK, realtime.Code)
+	for _, headers := range []map[string]string{nil, {"Authorization": "Bearer invalid"}, {"Cookie": service.RefreshCookieName + "=" + client.RefreshToken}, {middleware.ClientSessionHeader: client.RefreshToken}, {middleware.ClientSessionHeader: web.AccessToken}, {"Authorization": "Bearer " + web.AccessToken}, {middleware.ClientSessionHeader: client.AccessToken, "Authorization": "Bearer invalid"}, {middleware.ClientSessionHeader: client.AccessToken, "New-Api-User": strconv.Itoa(user.Id + 1)}} {
+		response, _ := clientSessionTestRequest(t, router, "POST", "/v1/chat/completions", `{}`, headers)
+		assert.Equal(t, http.StatusUnauthorized, response.Code, response.Body.String())
+	}
+	profile := gin.New()
+	profile.PUT("/api/user/self", middleware.UserAuth(), UpdateSelf)
+	response, _ := clientSessionTestRequest(t, profile, "PUT", "/api/user/self", `{"password":"replacement-password","language":"en"}`, map[string]string{middleware.ClientSessionHeader: client.AccessToken})
+	assert.Equal(t, http.StatusForbidden, response.Code)
+	optional := gin.New()
+	optional.GET("/api/admin/optional", middleware.TryUserAuth(), func(c *gin.Context) { t.Error("client reached an undeclared optional route") })
+	response, _ = clientSessionTestRequest(t, optional, "GET", "/api/admin/optional", ``, map[string]string{"Authorization": "Bearer " + client.AccessToken})
+	assert.Equal(t, http.StatusForbidden, response.Code)
+	apiToken := &model.Token{UserId: user.Id, Key: strings.Repeat("a", 48), Status: common.TokenStatusEnabled, RemainQuota: 1000, ExpiredTime: -1}
+	require.NoError(t, model.DB.Create(apiToken).Error)
+	keyRouter := gin.New()
+	keyRouter.POST("/v1/chat/completions", middleware.TokenAuth(), func(c *gin.Context) {
+		assert.Equal(t, apiToken.Id, c.GetInt("token_id"))
+		assert.False(t, c.GetBool("client_session_relay"))
+		c.JSON(200, gin.H{"success": true})
+	})
+	response, _ = clientSessionTestRequest(t, keyRouter, "POST", "/v1/chat/completions", `{}`, map[string]string{"Authorization": "Bearer sk-" + apiToken.Key})
+	assert.Equal(t, http.StatusOK, response.Code)
+	for _, state := range []map[string]any{{"status": common.TokenStatusDisabled}, {"status": common.TokenStatusEnabled, "expired_time": time.Now().Unix() - 1}, {"status": common.TokenStatusEnabled, "expired_time": -1, "remain_quota": 0}} {
+		require.NoError(t, model.DB.Model(apiToken).Updates(state).Error)
+		response, _ = clientSessionTestRequest(t, keyRouter, "POST", "/v1/chat/completions", `{}`, map[string]string{"Authorization": "Bearer sk-" + apiToken.Key})
+		assert.Equal(t, http.StatusUnauthorized, response.Code)
+		response, _ = clientSessionTestRequest(t, keyRouter, "POST", "/v1/chat/completions", `{}`, map[string]string{"Authorization": "Bearer sk-" + apiToken.Key, middleware.ClientSessionHeader: client.AccessToken})
+		assert.Equal(t, http.StatusUnauthorized, response.Code)
+	}
+	for _, transport := range []string{"x-api-key", "x-goog-api-key", "mj-api-secret", "Sec-WebSocket-Protocol"} {
+		value := "invalid"
+		if transport == "Sec-WebSocket-Protocol" {
+			value = "openai-insecure-api-key.invalid"
+		}
+		response, _ = clientSessionTestRequest(t, router, "POST", "/v1/chat/completions", `{}`, map[string]string{"Authorization": "Bearer " + client.AccessToken, transport: value})
+		assert.Equal(t, http.StatusUnauthorized, response.Code)
+	}
+	_, err = model.RevokeUserSession(user.Id, client.Session.SID, "test")
+	require.NoError(t, err)
+	response, _ = clientSessionTestRequest(t, router, "POST", "/v1/chat/completions", `{}`, map[string]string{"Authorization": "Bearer " + client.AccessToken})
+	assert.Equal(t, http.StatusUnauthorized, response.Code)
 }

@@ -47,6 +47,7 @@ type AuthBundle struct {
 	AccessExpiresAt int64            `json:"access_expires_at"`
 	Session         LoginSessionView `json:"session"`
 	RefreshToken    string           `json:"-"`
+	ClientSession   bool             `json:"-"`
 }
 
 func CreateLoginSession(userID int, loginMethod, ip, userAgent string) (*AuthBundle, error) {
@@ -231,7 +232,17 @@ func advanceCurrentSessionToVersion(identity AuthIdentity, nextUserAuthVersion i
 	return issueAuthBundle(session, "", true)
 }
 
+// RefreshLoginSession only accepts web sessions; a client session cannot be
+// upgraded into an unrestricted dashboard session through the cookie endpoint.
 func RefreshLoginSession(rawRefreshToken, expectedSID, ip, userAgent string) (*AuthBundle, *model.User, error) {
+	return refreshLoginSession(rawRefreshToken, expectedSID, ip, userAgent, false)
+}
+
+func RefreshClientLoginSession(rawRefreshToken, expectedSID, ip, userAgent string) (*AuthBundle, *model.User, error) {
+	return refreshLoginSession(rawRefreshToken, expectedSID, ip, userAgent, true)
+}
+
+func refreshLoginSession(rawRefreshToken, expectedSID, ip, userAgent string, client bool) (*AuthBundle, *model.User, error) {
 	sid, secret, ok := splitRefreshToken(rawRefreshToken)
 	if !ok {
 		return nil, nil, ErrRefreshTokenInvalid
@@ -244,6 +255,9 @@ func RefreshLoginSession(rawRefreshToken, expectedSID, ip, userAgent string) (*A
 		if errors.Is(err, model.ErrUserSessionInactive) {
 			return nil, nil, ErrLoginSessionRevoked
 		}
+		return nil, nil, ErrRefreshTokenInvalid
+	}
+	if strings.HasPrefix(session.LoginMethod, ClientLoginMethodPrefix) != client {
 		return nil, nil, ErrRefreshTokenInvalid
 	}
 	if session.Status != model.UserSessionStatusActive || session.RevokedAt != 0 || session.ExpiresAt <= time.Now().Unix() {
@@ -303,6 +317,30 @@ func RevokeByRefreshToken(rawRefreshToken, expectedSID, reason string) error {
 	}
 	_, err := model.RevokeUserSessionByRefreshHash(sid, hashRefreshSecret(secret), reason)
 	return err
+}
+
+// RevokeClientLoginSession authenticates logout using only an explicit refresh
+// secret, never cookies, a user ID, or a session ID alone.
+func RevokeClientLoginSession(rawRefreshToken, expectedSID string) error {
+	sid, secret, ok := splitRefreshToken(rawRefreshToken)
+	if !ok {
+		return ErrRefreshTokenInvalid
+	}
+	if expectedSID = strings.TrimSpace(expectedSID); expectedSID != "" && expectedSID != sid {
+		return ErrLoginSessionMismatch
+	}
+	session, err := model.GetUserSessionCached(sid)
+	if err != nil || !strings.HasPrefix(session.LoginMethod, ClientLoginMethodPrefix) {
+		return ErrRefreshTokenInvalid
+	}
+	revoked, err := model.RevokeUserSessionByRefreshHash(sid, hashRefreshSecret(secret), "client_logout")
+	if err != nil {
+		return err
+	}
+	if !revoked {
+		return ErrRefreshTokenInvalid
+	}
+	return nil
 }
 
 func RefreshTokenSID(rawRefreshToken string) (string, bool) {
@@ -417,6 +455,7 @@ func issueAuthBundle(session *model.UserSession, rawRefreshToken string, current
 		AccessExpiresAt: accessExpiresAt,
 		Session:         sessionView(session, current),
 		RefreshToken:    rawRefreshToken,
+		ClientSession:   strings.HasPrefix(session.LoginMethod, ClientLoginMethodPrefix),
 	}, nil
 }
 
