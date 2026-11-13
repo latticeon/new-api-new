@@ -7825,6 +7825,20 @@
     "Log cleanup timestamp must be in the past": "ログクリーンアップの基準日時は過去にしてください",
     "No log rows were deleted": "ログは削除されませんでした",
     "Invalid log cleanup setting": "ログクリーンアップ設定が無効です",
-    "Log retention must be between 1 and 36500 days": "ログ保持日数は 1～36500 日で指定してください"
+    "Log retention must be between 1 and 36500 days": "ログ保持日数は 1～36500 日で指定してください",
+    "Arrival auto-grouping": "入金時の自動グループ変更",
+    "Counts successful wallet arrivals, not current balance. Subscription payments and periodic resets do not count.": "現在の残高ではなく、ウォレットへの入金成功分を集計します。サブスクリプションの支払いや定期リセットは含みません。",
+    "Enable arrival auto-grouping": "入金時の自動グループ変更を有効化",
+    "Arrival threshold mode": "入金しきい値の方式",
+    "Single arrival": "単一入金",
+    "Cumulative arrivals": "累計入金",
+    "Arrival threshold (quota units)": "入金しきい値（クォータ単位）",
+    "Source group": "元のグループ",
+    "Leave empty to allow any source group": "空欄の場合はすべての元グループを許可",
+    "Count administrator additions": "管理者による加算を含める",
+    "Only positive quota changes count; deductions never count as arrivals.": "クォータの増加のみを集計し、減算は入金に含めません。",
+    "Enter a valid non-negative quota amount": "有効な0以上のクォータを入力してください",
+    "Enter a positive arrival threshold": "0より大きい入金しきい値を入力してください",
+    "Select a target group": "変更先のグループを選択してください"
   }
 }

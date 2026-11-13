@@ -7825,6 +7825,20 @@
     "Log cleanup timestamp must be in the past": "La date limite du nettoyage doit être dans le passé",
     "No log rows were deleted": "Aucune entrée de journal n’a été supprimée",
     "Invalid log cleanup setting": "Paramètre de nettoyage des journaux invalide",
-    "Log retention must be between 1 and 36500 days": "La conservation des journaux doit être comprise entre 1 et 36500 jours"
+    "Log retention must be between 1 and 36500 days": "La conservation des journaux doit être comprise entre 1 et 36500 jours",
+    "Arrival auto-grouping": "Affectation automatique après crédit",
+    "Counts successful wallet arrivals, not current balance. Subscription payments and periodic resets do not count.": "Comptabilise les crédits réussis du portefeuille, pas le solde actuel. Les paiements d’abonnement et les remises à zéro périodiques sont exclus.",
+    "Enable arrival auto-grouping": "Activer l’affectation automatique après crédit",
+    "Arrival threshold mode": "Mode du seuil de crédit",
+    "Single arrival": "Crédit unique",
+    "Cumulative arrivals": "Crédits cumulés",
+    "Arrival threshold (quota units)": "Seuil de crédit (unités de quota)",
+    "Source group": "Groupe source",
+    "Leave empty to allow any source group": "Laissez vide pour autoriser tout groupe source",
+    "Count administrator additions": "Inclure les ajouts administrateur",
+    "Only positive quota changes count; deductions never count as arrivals.": "Seules les hausses de quota comptent ; les déductions ne sont jamais des crédits.",
+    "Enter a valid non-negative quota amount": "Saisissez un quota valide et non négatif",
+    "Enter a positive arrival threshold": "Saisissez un seuil de crédit supérieur à zéro",
+    "Select a target group": "Sélectionnez un groupe cible"
   }
 }

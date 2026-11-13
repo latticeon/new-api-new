@@ -7825,6 +7825,20 @@
     "Log cleanup timestamp must be in the past": "日志清理截止时间必须早于当前时间",
     "No log rows were deleted": "未删除任何日志记录",
     "Invalid log cleanup setting": "日志清理设置无效",
-    "Log retention must be between 1 and 36500 days": "日志保留天数必须介于 1 到 36500 天之间"
+    "Log retention must be between 1 and 36500 days": "日志保留天数必须介于 1 到 36500 天之间",
+    "Arrival auto-grouping": "到账自动分组",
+    "Counts successful wallet arrivals, not current balance. Subscription payments and periodic resets do not count.": "按钱包成功到账统计，而非当前余额。订阅付款和周期重置不计入。",
+    "Enable arrival auto-grouping": "启用到账自动分组",
+    "Arrival threshold mode": "到账门槛模式",
+    "Single arrival": "单笔到账",
+    "Cumulative arrivals": "累计到账",
+    "Arrival threshold (quota units)": "到账门槛（额度单位）",
+    "Source group": "来源分组",
+    "Leave empty to allow any source group": "留空表示不限来源分组",
+    "Count administrator additions": "计入管理员加额",
+    "Only positive quota changes count; deductions never count as arrivals.": "仅计入正向加额；减额永不计为到账。",
+    "Enter a valid non-negative quota amount": "请输入有效的非负额度",
+    "Enter a positive arrival threshold": "请输入大于零的到账门槛",
+    "Select a target group": "请选择目标分组"
   }
 }

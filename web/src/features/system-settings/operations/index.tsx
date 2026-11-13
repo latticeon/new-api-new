@@ -20,6 +20,7 @@ import { useStatus } from '@/hooks/use-status'
 
 import { SettingsPage } from '../components/settings-page'
 import type { OperationsSettings } from '../types'
+import { ARRIVAL_REBATE_DEFAULT_OPTIONS } from './arrival-rebate-settings'
 import {
   OPERATIONS_DEFAULT_SECTION,
   getOperationsSectionContent,
@@ -27,13 +28,14 @@ import {
 } from './section-registry.tsx'
 
 const defaultOperationsSettings: OperationsSettings = {
-  'general_setting.normalize_response_model_enabled': false,
-  'maintenance_setting.enabled': false,
-  'maintenance_setting.message':
-    'The API is temporarily under maintenance. Please try again later.',
+  ...ARRIVAL_REBATE_DEFAULT_OPTIONS,
   'log_setting.auto_cleanup_enabled': false,
   'log_setting.cleanup_retention_days': 30,
   'log_setting.cleanup_scope': 'consume_error',
+  'maintenance_setting.enabled': false,
+  'maintenance_setting.message':
+    'The API is temporarily under maintenance. Please try again later.',
+  'general_setting.normalize_response_model_enabled': false,
   ErrorMessageRewriteEnabled: false,
   ErrorMessageRewriteRules: '[]',
   DefaultCollapseSidebar: false,

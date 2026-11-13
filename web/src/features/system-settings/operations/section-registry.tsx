@@ -28,6 +28,8 @@ import { UpdateCheckerSection } from '../maintenance/update-checker-section'
 import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 import { APIMaintenanceSection } from './api-maintenance-section'
+import { arrivalSettingsValues } from './arrival-rebate-settings'
+import { ArrivalSettingsSection } from './arrival-settings-section'
 import { ErrorRewriteSection } from './error-rewrite-section'
 import { LogCleanupSection } from './log-cleanup-section'
 
@@ -36,6 +38,13 @@ const OPERATIONS_SECTIONS = [
     id: 'hot-restart',
     titleKey: 'Linux graceful hot restart',
     build: () => <HotRestartPanel />,
+  },
+  {
+    id: 'arrival',
+    titleKey: 'Arrival auto-grouping',
+    build: (settings: OperationsSettings) => (
+      <ArrivalSettingsSection defaultValues={arrivalSettingsValues(settings)} />
+    ),
   },
   {
     id: 'log-cleanup',

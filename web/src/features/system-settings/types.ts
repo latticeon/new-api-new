@@ -367,12 +367,18 @@ export type BillingSettings = {
 }
 
 export type OperationsSettings = {
-  'general_setting.normalize_response_model_enabled': boolean
   'maintenance_setting.enabled': boolean
   'maintenance_setting.message': string
   'log_setting.auto_cleanup_enabled': boolean
   'log_setting.cleanup_retention_days': number
   'log_setting.cleanup_scope': 'consume_error' | 'consume' | 'error'
+  'arrival_setting.enabled': boolean
+  'arrival_setting.include_admin': boolean
+  'arrival_setting.mode': 'single' | 'cumulative'
+  'arrival_setting.threshold': number
+  'arrival_setting.source_group': string
+  'arrival_setting.target_group': string
+  'general_setting.normalize_response_model_enabled': boolean
   ErrorMessageRewriteEnabled: boolean
   ErrorMessageRewriteRules: string
   DefaultCollapseSidebar: boolean

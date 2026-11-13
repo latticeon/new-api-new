@@ -201,6 +201,10 @@ func UpdateOption(c *gin.Context) {
 	default:
 		option.Value = fmt.Sprintf("%v", option.Value)
 	}
+	if err := operation_setting.ValidateArrivalRebateOption(option.Key, option.Value.(string)); err != nil {
+		common.ApiErrorT(c, "Invalid parameters")
+		return
+	}
 	switch option.Key {
 	case "QuotaForInviter", "QuotaForInvitee":
 		if isPositiveOptionValue(option.Value.(string)) && !operation_setting.IsPaymentComplianceConfirmed() {

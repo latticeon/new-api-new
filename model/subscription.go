@@ -476,6 +476,13 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 	// Determine the downgrade target: an explicit downgrade group takes precedence,
 	// otherwise revert to the group held before purchase (legacy behavior).
 	target := downgradeGroup
+	earned, err := earnedGroupTx(tx, sub.UserId)
+	if err != nil {
+		return "", err
+	}
+	if earned != "" {
+		target = earned
+	}
 	if target == "" {
 		// Legacy behavior: only revert when the subscription actually elevated the user.
 		if currentGroup != upgradeGroup {
@@ -605,7 +612,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if order.Status != common.TopUpStatusPending {
 			return ErrSubscriptionOrderStatusInvalid
 		}
-		plan, err := GetSubscriptionPlanById(order.PlanId)
+		plan, err := getSubscriptionPlanByIdTx(tx, order.PlanId)
 		if err != nil {
 			return err
 		}
@@ -643,10 +650,16 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		logPlanTitle = plan.Title
 		logMoney = order.Money
 		logPaymentMethod = order.PaymentMethod
-		return nil
+		if order.PaymentProvider == PaymentProviderBalance {
+			return nil
+		}
+		return RecordArrivalTx(tx, ArrivalInput{Source: "subscription", Reference: order.TradeNo, UserId: order.UserId})
 	})
 	if err != nil {
 		return err
+	}
+	if logUserId > 0 {
+		ProcessArrivalEffects("subscription", tradeNo, logUserId)
 	}
 	if upgradeGroup != "" && logUserId > 0 {
 		refreshSubscriptionUserGroupCache(logUserId, common.LogText("subscription payment completion"))
@@ -1221,6 +1234,13 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 			// group held before purchase (legacy behavior, only when the subscription
 			// actually elevated the user).
 			target := strings.TrimSpace(lastExpired.DowngradeGroup)
+			earned, err := earnedGroupTx(tx, userId)
+			if err != nil {
+				return err
+			}
+			if earned != "" {
+				target = earned
+			}
 			if target == "" {
 				upgradeGroup := strings.TrimSpace(lastExpired.UpgradeGroup)
 				prevGroup := strings.TrimSpace(lastExpired.PrevUserGroup)

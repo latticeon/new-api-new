@@ -7825,6 +7825,20 @@
     "Log cleanup timestamp must be in the past": "Время отсечения для очистки должно быть в прошлом",
     "No log rows were deleted": "Записи журнала не были удалены",
     "Invalid log cleanup setting": "Недопустимая настройка очистки журналов",
-    "Log retention must be between 1 and 36500 days": "Срок хранения журналов должен быть от 1 до 36500 дней"
+    "Log retention must be between 1 and 36500 days": "Срок хранения журналов должен быть от 1 до 36500 дней",
+    "Arrival auto-grouping": "Автогруппировка при зачислении",
+    "Counts successful wallet arrivals, not current balance. Subscription payments and periodic resets do not count.": "Учитываются успешные зачисления в кошелёк, а не текущий баланс. Оплата подписок и периодические сбросы не учитываются.",
+    "Enable arrival auto-grouping": "Включить автогруппировку при зачислении",
+    "Arrival threshold mode": "Режим порога зачисления",
+    "Single arrival": "Разовое зачисление",
+    "Cumulative arrivals": "Суммарные зачисления",
+    "Arrival threshold (quota units)": "Порог зачисления (единицы квоты)",
+    "Source group": "Исходная группа",
+    "Leave empty to allow any source group": "Оставьте пустым для любой исходной группы",
+    "Count administrator additions": "Учитывать начисления администратора",
+    "Only positive quota changes count; deductions never count as arrivals.": "Учитываются только увеличения квоты; списания никогда не считаются зачислениями.",
+    "Enter a valid non-negative quota amount": "Введите корректное неотрицательное значение квоты",
+    "Enter a positive arrival threshold": "Введите порог зачисления больше нуля",
+    "Select a target group": "Выберите целевую группу"
   }
 }

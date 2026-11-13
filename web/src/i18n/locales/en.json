@@ -7825,6 +7825,20 @@
     "Log cleanup timestamp must be in the past": "Log cleanup timestamp must be in the past",
     "No log rows were deleted": "No log rows were deleted",
     "Invalid log cleanup setting": "Invalid log cleanup setting",
-    "Log retention must be between 1 and 36500 days": "Log retention must be between 1 and 36500 days"
+    "Log retention must be between 1 and 36500 days": "Log retention must be between 1 and 36500 days",
+    "Arrival auto-grouping": "Arrival auto-grouping",
+    "Counts successful wallet arrivals, not current balance. Subscription payments and periodic resets do not count.": "Counts successful wallet arrivals, not current balance. Subscription payments and periodic resets do not count.",
+    "Enable arrival auto-grouping": "Enable arrival auto-grouping",
+    "Arrival threshold mode": "Arrival threshold mode",
+    "Single arrival": "Single arrival",
+    "Cumulative arrivals": "Cumulative arrivals",
+    "Arrival threshold (quota units)": "Arrival threshold (quota units)",
+    "Source group": "Source group",
+    "Leave empty to allow any source group": "Leave empty to allow any source group",
+    "Count administrator additions": "Count administrator additions",
+    "Only positive quota changes count; deductions never count as arrivals.": "Only positive quota changes count; deductions never count as arrivals.",
+    "Enter a valid non-negative quota amount": "Enter a valid non-negative quota amount",
+    "Enter a positive arrival threshold": "Enter a positive arrival threshold",
+    "Select a target group": "Select a target group"
   }
 }

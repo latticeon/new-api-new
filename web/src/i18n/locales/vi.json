@@ -7825,6 +7825,20 @@
     "Log cleanup timestamp must be in the past": "Mốc thời gian dọn nhật ký phải ở trong quá khứ",
     "No log rows were deleted": "Không có bản ghi nhật ký nào bị xóa",
     "Invalid log cleanup setting": "Cài đặt dọn nhật ký không hợp lệ",
-    "Log retention must be between 1 and 36500 days": "Thời gian lưu nhật ký phải từ 1 đến 36500 ngày"
+    "Log retention must be between 1 and 36500 days": "Thời gian lưu nhật ký phải từ 1 đến 36500 ngày",
+    "Arrival auto-grouping": "Tự động phân nhóm khi ghi có",
+    "Counts successful wallet arrivals, not current balance. Subscription payments and periodic resets do not count.": "Tính các khoản ghi có thành công vào ví, không phải số dư hiện tại. Không tính thanh toán gói đăng ký và đặt lại định kỳ.",
+    "Enable arrival auto-grouping": "Bật tự động phân nhóm khi ghi có",
+    "Arrival threshold mode": "Chế độ ngưỡng ghi có",
+    "Single arrival": "Ghi có một lần",
+    "Cumulative arrivals": "Ghi có tích lũy",
+    "Arrival threshold (quota units)": "Ngưỡng ghi có (đơn vị hạn mức)",
+    "Source group": "Nhóm nguồn",
+    "Leave empty to allow any source group": "Để trống để chấp nhận mọi nhóm nguồn",
+    "Count administrator additions": "Tính cả khoản cộng bởi quản trị viên",
+    "Only positive quota changes count; deductions never count as arrivals.": "Chỉ tính thay đổi tăng hạn mức; khoản trừ không bao giờ được tính là ghi có.",
+    "Enter a valid non-negative quota amount": "Nhập hạn mức hợp lệ, không âm",
+    "Enter a positive arrival threshold": "Nhập ngưỡng ghi có lớn hơn 0",
+    "Select a target group": "Chọn nhóm đích"
   }
 }

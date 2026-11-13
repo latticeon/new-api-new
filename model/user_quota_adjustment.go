@@ -33,6 +33,7 @@ func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuo
 		return nil, ErrWalletQuotaLimitExceeded
 	}
 
+	reference := common.GetUUID()
 	var adjustment UserQuotaAdjustment
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var user User
@@ -68,7 +69,10 @@ func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuo
 			}
 		}
 		adjustment = UserQuotaAdjustment{UserID: user.Id, Username: user.Username, Before: user.Quota, After: after}
-		return nil
+		if after <= user.Quota {
+			return nil
+		}
+		return RecordArrivalTx(tx, ArrivalInput{Source: "admin", Reference: reference, UserId: userID, Quota: after - user.Quota})
 	})
 	if err != nil {
 		return nil, err
@@ -81,6 +85,9 @@ func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuo
 		if err := cacheIncrUserQuota(userID, delta); err != nil {
 			common.SysError(common.LogText("failed to sync manual quota adjustment for user %d: %s", userID, err))
 		}
+	}
+	if delta > 0 {
+		ProcessArrivalEffects("admin", reference, userID)
 	}
 	return &adjustment, nil
 }
