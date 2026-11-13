@@ -176,6 +176,10 @@ func SetApiRouter(router *gin.Engine) {
 		}
 		rebateRoute := apiRouter.Group("/rebates", middleware.DisableCache(), middleware.AdminAuth())
 		{
+			rebateRoute.GET("/overview", controller.AdminRebateOverview)
+			rebateRoute.GET("/ledger", controller.AdminRebateLedger)
+			rebateRoute.GET("/ranking", controller.AdminRebateRanking)
+			rebateRoute.GET("/invitees", controller.AdminRebateInvitees)
 			rebateRoute.POST("/:id/retry", controller.AdminRetryRebate)
 		}
 		hotRestartRoute := apiRouter.Group("/hot_restart", middleware.RootAuth())

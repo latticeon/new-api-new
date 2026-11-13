@@ -200,6 +200,24 @@ func TestArrivalRebateDatabaseMatrix(t *testing.T) {
 			require.NoError(t, DB.First(&recipient, inviter.Id).Error)
 			assert.Equal(t, 50, recipient.Quota)
 			assert.Zero(t, recipient.AffQuota)
+			page := &common.PageInfo{Page: 1, PageSize: 1}
+			rows, total, err := ListArrivalRebates(RebateQuery{Source: "online", Status: "paid", Sort: "reward"}, page)
+			require.NoError(t, err)
+			assert.Equal(t, int64(2), total)
+			assert.Len(t, rows, 1)
+			overview, err := GetRebateOverview(RebateQuery{})
+			require.NoError(t, err)
+			assert.Equal(t, int64(150), overview.PaidReward)
+			assert.Equal(t, int64(100), overview.PendingReward)
+			rank, _, err := ListRebateParticipants(RebateQuery{Sort: "reward"}, true, page)
+			require.NoError(t, err)
+			require.Len(t, rank, 1)
+			assert.Equal(t, inviter.Id, rank[0].Id)
+			assert.Equal(t, int64(150), rank[0].Reward)
+			invited, _, err := ListRebateParticipants(RebateQuery{InviterId: inviter.Id}, false, page)
+			require.NoError(t, err)
+			require.Len(t, invited, 1)
+			assert.Equal(t, invitee.Id, invited[0].Id)
 		})
 	}
 }
@@ -427,6 +445,13 @@ func TestArrivalSourceEvidenceAndSettings(t *testing.T) {
 	recordArrival(t, ArrivalInput{Source: "redemption", Reference: "meets-single", UserId: invitee.Id, Quota: 100})
 	require.NoError(t, DB.First(&after, invitee.Id).Error)
 	assert.Equal(t, "single-earned", after.EarnedGroup)
+	// Deleting display logs has no effect on independent receipt statistics.
+	stats, err := GetRebateOverview(RebateQuery{})
+	require.NoError(t, err)
+	require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&Log{}).Error)
+	unchanged, err := GetRebateOverview(RebateQuery{})
+	require.NoError(t, err)
+	assert.Equal(t, stats, unchanged)
 	for _, tc := range []struct {
 		key, value string
 		valid      bool

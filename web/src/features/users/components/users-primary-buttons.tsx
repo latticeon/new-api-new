@@ -17,15 +17,18 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Plus } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { RebateReportDialog } from '@/features/rebates/rebate-report-dialog'
 
 import { useUsers } from './users-provider'
 
 export function UsersPrimaryButtons() {
   const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useUsers()
+  const [reportsOpen, setReportsOpen] = useState(false)
 
   const handleCreate = () => {
     setCurrentRow(null)
@@ -34,6 +37,10 @@ export function UsersPrimaryButtons() {
 
   return (
     <div className='flex gap-2'>
+      <Button size='sm' variant='outline' onClick={() => setReportsOpen(true)}>
+        {t('Invitation and rebate reports')}
+      </Button>
+      <RebateReportDialog open={reportsOpen} onOpenChange={setReportsOpen} />
       <Button size='sm' onClick={handleCreate}>
         <Plus className='h-4 w-4' />
         {t('Add User')}

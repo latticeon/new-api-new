@@ -17,12 +17,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { CopyButton } from '@/components/copy-button'
 import { Dialog } from '@/components/dialog'
 import { ErrorState } from '@/components/error-state'
 import { LoadingState } from '@/components/loading-state'
+import { Button } from '@/components/ui/button'
+import { RebateReportDialog } from '@/features/rebates/rebate-report-dialog'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber, formatQuota } from '@/lib/format'
 import { requireServerSuccess } from '@/lib/server-error-message'
@@ -36,6 +39,7 @@ export function UserOverviewDialog(props: {
 }) {
   const { t, i18n } = useTranslation()
   const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
+  const [reportsOpen, setReportsOpen] = useState(false)
   const query = useQuery({
     queryKey: ['users', props.userId, 'overview'],
     enabled: props.open,
@@ -90,6 +94,18 @@ export function UserOverviewDialog(props: {
             <dt>{t('Total invitation earnings')}</dt>
             <dd>{formatQuota(user.aff_history_quota ?? 0)}</dd>
           </dl>
+          <Button
+            className='mt-4'
+            variant='outline'
+            onClick={() => setReportsOpen(true)}
+          >
+            {t('Invitation and rebate details')}
+          </Button>
+          <RebateReportDialog
+            open={reportsOpen}
+            onOpenChange={setReportsOpen}
+            inviterId={props.userId}
+          />
         </>
       )}
     </Dialog>
