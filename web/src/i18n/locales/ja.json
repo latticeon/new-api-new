@@ -7779,6 +7779,14 @@
     "Enable rule {{name}}": "ルール {{name}} を有効化",
     "Delete rule {{name}}?": "ルール {{name}} を削除しますか？",
     "Normalize response model names": "応答のモデル名を統一",
-    "Return the requested model name without changing routing, usage or billing": "ルーティング、使用量、課金を変更せず、リクエストされたモデル名を返します"
+    "Return the requested model name without changing routing, usage or billing": "ルーティング、使用量、課金を変更せず、リクエストされたモデル名を返します",
+    "API maintenance": "API メンテナンス",
+    "Skipped": "スキップ済み",
+    "Events": "イベント数",
+    "Report": "レポート",
+    "Pause new API executions": "新規 API 実行を一時停止",
+    "Existing generations may finish. Management and existing task queries and downloads remain available.": "実行中の生成は完了できます。管理機能、既存タスクの照会とダウンロードは引き続き利用できます。",
+    "Maintenance message": "メンテナンスメッセージ",
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "サービス利用不可のステータスとともに API クライアントに返されます。空欄の場合は既定のメッセージを使用します。"
   }
 }

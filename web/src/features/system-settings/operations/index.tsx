@@ -28,6 +28,9 @@ import {
 
 const defaultOperationsSettings: OperationsSettings = {
   'general_setting.normalize_response_model_enabled': false,
+  'maintenance_setting.enabled': false,
+  'maintenance_setting.message':
+    'The API is temporarily under maintenance. Please try again later.',
   ErrorMessageRewriteEnabled: false,
   ErrorMessageRewriteRules: '[]',
   DefaultCollapseSidebar: false,

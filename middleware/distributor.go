@@ -33,6 +33,10 @@ type ModelRequest struct {
 
 func Distribute() func(c *gin.Context) {
 	return func(c *gin.Context) {
+		// GET task retrieval and Midjourney's POST query remain available.
+		if c.Request.Method != http.MethodGet && !strings.HasSuffix(c.Request.URL.Path, "/task/list-by-condition") && RejectAPIExecution(c) {
+			return
+		}
 		var channel *model.Channel
 		defer func() {
 			if c.Writer.Status() >= 400 {

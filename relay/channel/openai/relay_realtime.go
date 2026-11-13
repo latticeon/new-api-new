@@ -53,6 +53,11 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 	writeTargetFrame := func(messageType int, message []byte) error {
 		targetWriteMu.Lock()
 		defer targetWriteMu.Unlock()
+		if messageType == websocket.TextMessage {
+			if rejection := service.RealtimeMaintenanceRejection(message); rejection != nil {
+				return writeClient(rejection)
+			}
+		}
 		return targetConn.WriteMessage(messageType, message)
 	}
 	writeTarget := func(message []byte) error {
@@ -110,6 +115,13 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 				if err != nil {
 					errChan <- fmt.Errorf("error unmarshalling message: %v", err)
 					return
+				}
+				if rejection := service.RealtimeMaintenanceRejection(message); rejection != nil {
+					if err := writeClient(rejection); err != nil {
+						errChan <- fmt.Errorf("error writing maintenance rejection: %w", err)
+						return
+					}
+					continue
 				}
 				if plugins != nil {
 					patched, dropped := plugins.ClientEvent(realtimeEvent.Type, message)

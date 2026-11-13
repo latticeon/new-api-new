@@ -7779,6 +7779,14 @@
     "Enable rule {{name}}": "Enable rule {{name}}",
     "Delete rule {{name}}?": "Delete rule {{name}}?",
     "Normalize response model names": "Normalize response model names",
-    "Return the requested model name without changing routing, usage or billing": "Return the requested model name without changing routing, usage or billing"
+    "Return the requested model name without changing routing, usage or billing": "Return the requested model name without changing routing, usage or billing",
+    "API maintenance": "API maintenance",
+    "Skipped": "Skipped",
+    "Events": "Events",
+    "Report": "Report",
+    "Pause new API executions": "Pause new API executions",
+    "Existing generations may finish. Management and existing task queries and downloads remain available.": "Existing generations may finish. Management and existing task queries and downloads remain available.",
+    "Maintenance message": "Maintenance message",
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Returned to API clients with service unavailable status. Leave empty to use the default message."
   }
 }

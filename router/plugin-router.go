@@ -152,6 +152,7 @@ func productionPluginRouteHandlers(generation *jsplugin.RoutingGeneration, group
 		middleware.SystemPerformanceCheck(),
 		middleware.ModelRequestRateLimit(),
 		middleware.PrepareTaskPluginRoute(),
+		middleware.APIExecutionMaintenance(),
 		middleware.Distribute(),
 		controller.RelayTask,
 	}

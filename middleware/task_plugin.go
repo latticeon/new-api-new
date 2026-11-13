@@ -1642,6 +1642,9 @@ func RespondTaskPluginError(c *gin.Context, taskErr *dto.TaskError) bool {
 		return false
 	}
 	sanitized := sanitizedTaskPluginError(taskErr.StatusCode, taskErr.Message)
+	if taskErr.Code == "api_maintenance" {
+		sanitized.Code, sanitized.Message, sanitized.Retryable = taskErr.Code, taskErr.Message, false
+	}
 	if requestplugin.Stopped(taskErr) {
 		// A request plugin's stop keeps its code and message, as on chat
 		// routes.
@@ -1659,6 +1662,13 @@ func RespondTaskPluginError(c *gin.Context, taskErr *dto.TaskError) bool {
 			"retryable":  sanitized.Retryable,
 			"requestId":  requestID,
 		})
+		if taskErr.Code == "api_maintenance" {
+			if wrapper, ok := body.(map[string]any); ok {
+				if _, wrapped := wrapper["__status"]; wrapped {
+					wrapper["__status"] = http.StatusServiceUnavailable
+				}
+			}
+		}
 		if callErr == nil {
 			callErr = WriteNativeReply(c, sanitized.HTTPStatus, body)
 		}

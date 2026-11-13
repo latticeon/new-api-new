@@ -362,6 +362,8 @@ export type BillingSettings = {
 
 export type OperationsSettings = {
   'general_setting.normalize_response_model_enabled': boolean
+  'maintenance_setting.enabled': boolean
+  'maintenance_setting.message': string
   ErrorMessageRewriteEnabled: boolean
   ErrorMessageRewriteRules: string
   DefaultCollapseSidebar: boolean

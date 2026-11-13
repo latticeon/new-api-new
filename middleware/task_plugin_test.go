@@ -24,6 +24,7 @@ import (
 	builtinplugins "github.com/QuantumNous/new-api/plugins"
 	kitdto "github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -1263,6 +1264,10 @@ export function parseTaskResult() { return {status: "SUCCESS"}; }
 }
 
 func TestPrepareTaskPluginDynamicQueryPreservesOrderAndSkipsNextHandlers(t *testing.T) {
+	maintenance := operation_setting.GetMaintenanceSetting()
+	previous := *maintenance
+	t.Cleanup(func() { *maintenance = previous })
+	maintenance.Enabled = true
 	setupTaskPluginRouteDB(t)
 	plugin := compileTaskRoutePlugin(t, `
 export const meta = {
@@ -1306,6 +1311,7 @@ export function parseTaskResult() { return {status: "SUCCESS"}; }
 			c.Next()
 		},
 		PrepareTaskPluginRoute(),
+		APIExecutionMaintenance(),
 		func(c *gin.Context) {
 			nextHandlerCalled = true
 			c.Status(http.StatusTeapot)
@@ -1375,6 +1381,10 @@ export function buildSubmitRequest(){return {}} export function parseSubmitRespo
 }
 
 func TestPrepareTaskPluginStaticQueryHidesTaskExistenceAndSanitizesErrors(t *testing.T) {
+	maintenance := operation_setting.GetMaintenanceSetting()
+	previous := *maintenance
+	t.Cleanup(func() { *maintenance = previous })
+	maintenance.Enabled = true
 	setupTaskPluginRouteDB(t)
 	plugin := compileTaskRoutePlugin(t, `
 export const meta = {
@@ -1418,6 +1428,7 @@ export const native = {status: function(ctx, task) { return {id: task.task_id}; 
 			c.Next()
 		},
 		PrepareTaskPluginRoute(),
+		APIExecutionMaintenance(),
 	)
 
 	legacyRecorder := httptest.NewRecorder()

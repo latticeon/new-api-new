@@ -7779,6 +7779,14 @@
     "Enable rule {{name}}": "Bật quy tắc {{name}}",
     "Delete rule {{name}}?": "Xóa quy tắc {{name}}?",
     "Normalize response model names": "Chuẩn hóa tên mô hình trong phản hồi",
-    "Return the requested model name without changing routing, usage or billing": "Trả về tên mô hình được yêu cầu mà không thay đổi định tuyến, mức sử dụng hay tính phí"
+    "Return the requested model name without changing routing, usage or billing": "Trả về tên mô hình được yêu cầu mà không thay đổi định tuyến, mức sử dụng hay tính phí",
+    "API maintenance": "Bảo trì API",
+    "Skipped": "Đã bỏ qua",
+    "Events": "Số sự kiện",
+    "Report": "Báo cáo",
+    "Pause new API executions": "Tạm dừng thực thi API mới",
+    "Existing generations may finish. Management and existing task queries and downloads remain available.": "Các lượt tạo đang chạy có thể hoàn tất. Chức năng quản lý, truy vấn và tải xuống tác vụ hiện có vẫn khả dụng.",
+    "Maintenance message": "Thông báo bảo trì",
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Trả về cho máy khách API với trạng thái dịch vụ không khả dụng. Để trống để dùng thông báo mặc định."
   }
 }

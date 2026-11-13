@@ -26,9 +26,22 @@ import { PerformanceSection } from '../maintenance/performance-section'
 import { UpdateCheckerSection } from '../maintenance/update-checker-section'
 import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
+import { APIMaintenanceSection } from './api-maintenance-section'
 import { ErrorRewriteSection } from './error-rewrite-section'
 
 const OPERATIONS_SECTIONS = [
+  {
+    id: 'api-maintenance',
+    titleKey: 'API maintenance',
+    build: (settings: OperationsSettings) => (
+      <APIMaintenanceSection
+        defaultValues={{
+          enabled: settings['maintenance_setting.enabled'] ?? false,
+          message: settings['maintenance_setting.message'] ?? '',
+        }}
+      />
+    ),
+  },
   {
     id: 'behavior',
     titleKey: 'System Behavior',

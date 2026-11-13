@@ -7779,6 +7779,14 @@
     "Enable rule {{name}}": "启用规则 {{name}}",
     "Delete rule {{name}}?": "删除规则 {{name}}？",
     "Normalize response model names": "返回模型名归一",
-    "Return the requested model name without changing routing, usage or billing": "返回客户端请求的模型名，不改变路由、用量或计费"
+    "Return the requested model name without changing routing, usage or billing": "返回客户端请求的模型名，不改变路由、用量或计费",
+    "API maintenance": "API 维护",
+    "Skipped": "已跳过",
+    "Events": "事件数",
+    "Report": "报表",
+    "Pause new API executions": "暂停新的 API 执行",
+    "Existing generations may finish. Management and existing task queries and downloads remain available.": "现有生成任务可继续完成。管理功能、现有任务查询和下载仍可使用。",
+    "Maintenance message": "维护提示",
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "以服务不可用状态返回给 API 客户端。留空以使用默认提示。"
   }
 }

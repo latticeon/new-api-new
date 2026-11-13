@@ -27,6 +27,7 @@ import (
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/config"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -1427,4 +1428,64 @@ func TestResponsesWebSocketPreRoutingRejectionsFollowHealthClassification(t *tes
 			assert.Zero(t, successes)
 		})
 	}
+}
+
+func TestResponsesWSRequestRunnerMaintenanceRechecksEveryTurn(t *testing.T) {
+	_, token := setupResponsesWSRequestTest(t)
+	setting := operation_setting.GetMaintenanceSetting()
+	previous := *setting
+	t.Cleanup(func() { *setting = previous })
+	setting.Enabled = false
+	runner, _ := newResponsesWSTestRunner(t, token)
+	called := 0
+	handle := func(c *gin.Context) *types.NewAPIError { called++; return nil }
+	request := func() *http.Request {
+		return httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"client-model","input":"next"}`))
+	}
+	require.Nil(t, runner(request(), "before-maintenance", handle))
+	setting.Enabled, setting.Message = true, "planned maintenance"
+	apiError := runner(request(), "during-maintenance", handle)
+	require.NotNil(t, apiError)
+	assert.Equal(t, http.StatusServiceUnavailable, apiError.StatusCode)
+	assert.Equal(t, types.ErrorCode("api_maintenance"), apiError.GetErrorCode())
+	assert.Equal(t, 1, called)
+	setting.Enabled = false
+	require.Nil(t, runner(request(), "after-maintenance", handle))
+	assert.Equal(t, 2, called)
+}
+
+func TestResponsesWSMaintenanceCompletesAcceptedTurnAndRejectsNext(t *testing.T) {
+	maintenance := operation_setting.GetMaintenanceSetting()
+	previous := *maintenance
+	t.Cleanup(func() { *maintenance = previous })
+	maintenance.Enabled = false
+	finish := make(chan struct{})
+	var finishOnce sync.Once
+	t.Cleanup(func() { finishOnce.Do(func() { close(finish) }) })
+	fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+		if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NoError(t, ws.WriteMessage(websocket.TextMessage, []byte(`{"type":"response.created","response":{"id":"accepted","status":"in_progress"}}`))) {
+			return
+		}
+		<-finish
+		if !assert.NoError(t, ws.WriteMessage(websocket.TextMessage, []byte(`{"type":"response.completed","response":{"id":"accepted","status":"completed","usage":{"input_tokens":1000,"output_tokens":10,"total_tokens":1010}}}`))) {
+			return
+		}
+		_, _, _ = ws.ReadMessage()
+	})
+	require.NoError(t, fixture.client.WriteMessage(websocket.TextMessage, []byte(`{"type":"response.create","model":"ws-billing","input":"first"}`)))
+	assert.Equal(t, "response.created", readResponsesWSTestEvent(t, fixture.client)["type"])
+	maintenance.Enabled, maintenance.Message = true, "planned maintenance"
+	finishOnce.Do(func() { close(finish) })
+	assert.Equal(t, "response.completed", readResponsesWSTestEvent(t, fixture.client)["type"])
+	require.NoError(t, fixture.client.WriteMessage(websocket.TextMessage, []byte(`{"type":"response.create","model":"ws-billing","input":"second"}`)))
+	rejection := readResponsesWSTestEvent(t, fixture.client)
+	assert.Equal(t, "error", rejection["type"])
+	assert.Equal(t, float64(http.StatusServiceUnavailable), rejection["status"])
+	assert.Equal(t, "api_maintenance", rejection["error"].(map[string]any)["code"])
+	assert.Equal(t, int32(1), fixture.connections.Load())
+	fixture.closeAndWait(t)
+	assertResponsesWSAccounting(t, fixture, []int{1000})
 }

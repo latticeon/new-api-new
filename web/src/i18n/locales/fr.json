@@ -7779,6 +7779,14 @@
     "Enable rule {{name}}": "Activer la règle {{name}}",
     "Delete rule {{name}}?": "Supprimer la règle {{name}} ?",
     "Normalize response model names": "Uniformiser les noms de modèle renvoyés",
-    "Return the requested model name without changing routing, usage or billing": "Renvoyer le nom du modèle demandé sans modifier le routage, l’utilisation ni la facturation"
+    "Return the requested model name without changing routing, usage or billing": "Renvoyer le nom du modèle demandé sans modifier le routage, l’utilisation ni la facturation",
+    "API maintenance": "Maintenance de l’API",
+    "Skipped": "Ignoré",
+    "Events": "Événements",
+    "Report": "Rapport",
+    "Pause new API executions": "Suspendre les nouvelles exécutions API",
+    "Existing generations may finish. Management and existing task queries and downloads remain available.": "Les générations en cours peuvent se terminer. La gestion, la consultation et le téléchargement des tâches existantes restent disponibles.",
+    "Maintenance message": "Message de maintenance",
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Renvoyé aux clients API avec le statut service indisponible. Laisser vide pour utiliser le message par défaut."
   }
 }

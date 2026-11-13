@@ -225,6 +225,16 @@ func UpdateOption(c *gin.Context) {
 		}
 	}
 	switch option.Key {
+	case "maintenance_setting.enabled":
+		if option.Value != "true" && option.Value != "false" {
+			common.ApiErrorT(c, "Invalid parameters")
+			return
+		}
+	case "maintenance_setting.message":
+		if len([]rune(option.Value.(string))) > 2000 {
+			common.ApiErrorT(c, "Invalid parameters")
+			return
+		}
 	case common.OptionErrorMessageRewriteRules:
 		if err = common.ValidateErrorMessageRewriteRules(option.Value.(string)); err != nil {
 			common.ApiErrorT(c, "Invalid error rewrite rules: {{error}}", map[string]any{"error": err.Error()})

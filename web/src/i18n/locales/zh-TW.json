@@ -7779,6 +7779,14 @@
     "Enable rule {{name}}": "啟用規則 {{name}}",
     "Delete rule {{name}}?": "刪除規則 {{name}}？",
     "Normalize response model names": "統一回傳模型名稱",
-    "Return the requested model name without changing routing, usage or billing": "回傳用戶端請求的模型名稱，不變更路由、用量或計費"
+    "Return the requested model name without changing routing, usage or billing": "回傳用戶端請求的模型名稱，不變更路由、用量或計費",
+    "API maintenance": "API 維護",
+    "Skipped": "已略過",
+    "Events": "事件數",
+    "Report": "報表",
+    "Pause new API executions": "暫停新的 API 執行",
+    "Existing generations may finish. Management and existing task queries and downloads remain available.": "現有生成工作可繼續完成。管理功能、現有工作查詢和下載仍可使用。",
+    "Maintenance message": "維護提示",
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "以服務無法使用狀態回傳給 API 用戶端。留空以使用預設提示。"
   }
 }
