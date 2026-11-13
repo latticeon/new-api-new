@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Share2 } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { CopyButton } from '@/components/copy-button'
@@ -25,6 +26,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { IconBadge } from '@/components/ui/icon-badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SelfRebateRuleDialog } from '@/features/rebates/rebate-rule-dialog'
 import { formatQuota } from '@/lib/format'
 
 import type { UserWalletData } from '../types'
@@ -45,6 +47,7 @@ export function AffiliateRewardsCard({
   loading,
 }: AffiliateRewardsCardProps) {
   const { t } = useTranslation()
+  const [ruleOpen, setRuleOpen] = useState(false)
   if (loading) {
     return (
       <Card data-card-hover='false' className='bg-muted/20 py-0'>
@@ -99,6 +102,10 @@ export function AffiliateRewardsCard({
         </div>
 
         <div className='flex items-center gap-2'>
+          <Button variant='outline' size='sm' onClick={() => setRuleOpen(true)}>
+            {t('My effective rebate rule')}
+          </Button>
+          <SelfRebateRuleDialog open={ruleOpen} onOpenChange={setRuleOpen} />
           <Input
             value={affiliateLink}
             readOnly

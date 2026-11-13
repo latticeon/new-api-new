@@ -62,6 +62,20 @@ func parseReceipt(data string) *PaymentReceipt {
 	return &receipt
 }
 
+func EffectiveRebate(user *User) operation_setting.RebateSetting {
+	cfg := *operation_setting.GetRebateSetting()
+	if user.RebateMode == "on" {
+		cfg.Enabled = true
+	}
+	if user.RebateMode == "off" {
+		cfg.Enabled = false
+	}
+	if user.RebatePercent != nil {
+		cfg.Percent = *user.RebatePercent
+	}
+	return cfg
+}
+
 func snapshotArrivalRebateTx(tx *gorm.DB, event *ArrivalEvent, user *User, participate bool) error {
 	cfg := *operation_setting.GetRebateSetting()
 	sourceEnabled := event.Source == "online" && cfg.Online || event.Source == "subscription" && cfg.Subscription || event.Source == "redemption" && cfg.Redemption || event.Source == "admin" && cfg.Admin
@@ -97,13 +111,14 @@ func snapshotArrivalRebateTx(tx *gorm.DB, event *ArrivalEvent, user *User, parti
 		return err
 	}
 	event.InviterName = inviter.Username
+	cfg = EffectiveRebate(&inviter)
 	event.Percent = cfg.Percent
 	event.Destination = cfg.Destination
 	if cfg.Validate() != nil {
 		event.Reason = "invalid_configuration"
 		return nil
 	}
-	snapshot, err := common.Marshal(map[string]any{"effective": cfg, "global_enabled": operation_setting.GetRebateSetting().Enabled})
+	snapshot, err := common.Marshal(map[string]any{"effective": cfg, "inviter_mode": inviter.RebateMode, "inviter_percent": inviter.RebatePercent, "global_enabled": operation_setting.GetRebateSetting().Enabled})
 	if err != nil {
 		return err
 	}
@@ -216,6 +231,16 @@ func RetryPendingArrivalRebates(limit int) (int, error) {
 		}
 	}
 	return count, lastErr
+}
+
+func SetInviterRebateOverride(id int, mode string, percent *float64) error {
+	if mode != "inherit" && mode != "on" && mode != "off" {
+		return errors.New("invalid rebate override mode")
+	}
+	if percent != nil && !operation_setting.ValidRebatePercent(*percent) {
+		return errors.New("invalid rebate percent")
+	}
+	return DB.Model(&User{}).Where("id = ?", id).Updates(map[string]any{"rebate_mode": mode, "rebate_percent": percent}).Error
 }
 
 func receiptJSON(receipt *PaymentReceipt) string { return PaymentReceiptJSON(receipt) }

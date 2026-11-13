@@ -47,6 +47,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { AdminUserManageAction } from '@/features/auth/secure-verification'
+import { RebateOverrideDialog } from '@/features/rebates/rebate-rule-dialog'
 import { UserSubscriptionsDialog } from '@/features/subscriptions/components/dialogs/user-subscriptions-dialog'
 import { handleServerError } from '@/lib/handle-server-error'
 import { AuthOperationError } from '@/lib/secure-verification'
@@ -90,6 +91,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false)
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false)
   const [overviewOpen, setOverviewOpen] = useState(false)
+  const [rebateOpen, setRebateOpen] = useState(false)
 
   const handleEdit = () => {
     setCurrentRow(user)
@@ -219,6 +221,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         <DropdownMenuItem onClick={() => setOverviewOpen(true)}>
           {t('Account overview')}
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setRebateOpen(true)}>
+          {t('Inviter rebate override')}
+        </DropdownMenuItem>
         {isDisabled ? (
           <DropdownMenuItem onClick={() => handleManage('enable')}>
             {t('Enable')}
@@ -326,6 +331,13 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         open={overviewOpen}
         onOpenChange={setOverviewOpen}
         userId={user.id}
+      />
+      <RebateOverrideDialog
+        open={rebateOpen}
+        onOpenChange={setRebateOpen}
+        userId={user.id}
+        mode={user.rebate_mode}
+        percent={user.rebate_percent}
       />
       <ConfirmDialog
         open={resetPasskeyOpen && !verificationActive}

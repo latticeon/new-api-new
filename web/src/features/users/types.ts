@@ -51,6 +51,8 @@ export const userSchema = z.object({
   aff_quota: z.number().optional(),
   aff_history_quota: z.number().optional(),
   inviter_id: z.number().optional(),
+  rebate_mode: z.enum(['', 'inherit', 'on', 'off']).optional(),
+  rebate_percent: z.number().nullable().optional(),
   linux_do_id: z.string().optional(),
   status: userStatusSchema,
   role: userRoleSchema,

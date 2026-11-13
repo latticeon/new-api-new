@@ -74,7 +74,7 @@ export function RebateSettingsSection(props: {
     <SettingsSection title={t('Global arrival rebates')}>
       <p className='text-muted-foreground text-sm'>
         {t(
-          'Rules remain editable when globally disabled. Only direct inviters receive rebates.'
+          'Rules remain editable when globally disabled and still apply to individually enabled inviters. Only direct inviters receive rebates.'
         )}
       </p>
       <Form {...form}>

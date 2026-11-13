@@ -55,6 +55,24 @@ export interface RebateOverview {
   pending_reward: number
   skipped: number
 }
+export interface RebateRule {
+  enabled: boolean
+  rule: string
+  percent: number
+  max_per_invitee: number
+  quota_per_yuan: number
+  destination: string
+  online: boolean
+  subscription: boolean
+  redemption: boolean
+  admin: boolean
+}
+export interface SelfRebateRule {
+  mode: string
+  percent: number | null
+  effective: RebateRule
+  compliance_confirmed: boolean
+}
 export interface RebateFilter {
   inviter_id?: number
   search?: string
@@ -86,4 +104,18 @@ export async function getRebateRows<T>(
 export async function retryRebate(id: number) {
   const response = await api.post(`/api/rebates/${id}/retry`)
   return requireServerSuccess(response.data)
+}
+export async function setRebateOverride(
+  id: number,
+  mode: string,
+  percent: number | null
+) {
+  const response = await api.put(`/api/user/${id}/rebate`, { mode, percent })
+  return requireServerSuccess(response.data)
+}
+export async function getSelfRebateRule(): Promise<SelfRebateRule> {
+  const response = await api.get('/api/user/self/rebate')
+  return requireServerSuccess<{ data: SelfRebateRule; success: boolean }>(
+    response.data
+  ).data
 }

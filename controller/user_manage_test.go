@@ -768,3 +768,62 @@ func TestUserOverviewPreservesAccountFactsAndRoleBoundary(t *testing.T) {
 		})
 	}
 }
+
+func TestRebateOverrideRoleBoundaryAndSelfRule(t *testing.T) {
+	db := setupManageUserTestDB(t)
+	user := model.User{Username: "rebate-rule-owner", Password: "private-password", Role: common.RoleCommonUser, RebateMode: "inherit"}
+	require.NoError(t, db.Create(&user).Error)
+	for _, tc := range []struct {
+		name, body               string
+		operatorRole, targetRole int
+		allowed                  bool
+	}{
+		{"admin_sets_explicit_zero", `{"mode":"on","percent":0}`, common.RoleAdminUser, common.RoleCommonUser, true},
+		{"admin_cannot_update_peer", `{"mode":"off","percent":null}`, common.RoleAdminUser, common.RoleAdminUser, false},
+		{"root_sets_inheritance", `{"mode":"inherit","percent":null}`, common.RoleRootUser, common.RoleAdminUser, true},
+		{"invalid_mode_not_saved", `{"mode":"invalid","percent":null}`, common.RoleRootUser, common.RoleCommonUser, false},
+		{"out_of_range_not_saved", `{"mode":"on","percent":101}`, common.RoleRootUser, common.RoleCommonUser, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, db.Model(&user).Updates(map[string]any{"role": tc.targetRole, "rebate_mode": "inherit", "rebate_percent": nil}).Error)
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPut, "/api/user/1/rebate", strings.NewReader(tc.body))
+			c.Request.Header.Set("Content-Type", "application/json")
+			c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(user.Id)}}
+			c.Set("role", tc.operatorRole)
+			AdminSetRebateOverride(c)
+			var result struct {
+				Success bool `json:"success"`
+			}
+			require.NoError(t, common.Unmarshal(recorder.Body.Bytes(), &result))
+			assert.Equal(t, tc.allowed, result.Success)
+			var stored model.User
+			require.NoError(t, db.First(&stored, user.Id).Error)
+			if tc.allowed && tc.name == "admin_sets_explicit_zero" {
+				assert.Equal(t, "on", stored.RebateMode)
+				require.NotNil(t, stored.RebatePercent)
+				assert.Zero(t, *stored.RebatePercent)
+			} else {
+				assert.Equal(t, "inherit", stored.RebateMode)
+				assert.Nil(t, stored.RebatePercent)
+			}
+		})
+	}
+	other := model.User{Username: "other-rule-owner", AffCode: "other-rule-code", RebateMode: "off"}
+	require.NoError(t, db.Create(&other).Error)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/user/self/rebate?user_id=%d", other.Id), nil)
+	c.Set("id", user.Id)
+	GetSelfRebateRule(c)
+	var result struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Mode string `json:"mode"`
+		} `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(recorder.Body.Bytes(), &result))
+	assert.True(t, result.Success)
+	assert.Equal(t, "inherit", result.Data.Mode, "query identity cannot select another user's rule")
+}

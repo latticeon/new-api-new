@@ -130,7 +130,8 @@ func TestArrivalRebateDatabaseMatrix(t *testing.T) {
 				inviter, invitee := arrivalUsers(t)
 				require.NoError(t, DB.Migrator().DropColumn(&User{}, "ArrivalTotal"))
 				require.NoError(t, DB.Migrator().DropColumn(&User{}, "EarnedGroup"))
-
+				require.NoError(t, DB.Migrator().DropColumn(&User{}, "RebateMode"))
+				require.NoError(t, DB.Migrator().DropColumn(&User{}, "RebatePercent"))
 				require.NoError(t, DB.Migrator().DropColumn(&Redemption{}, "SalePrice"))
 				require.NoError(t, DB.Migrator().DropColumn(&Redemption{}, "RebateEnabled"))
 				require.NoError(t, DB.Migrator().DropColumn(&TopUp{}, "PaymentSnapshot"))
@@ -141,6 +142,7 @@ func TestArrivalRebateDatabaseMatrix(t *testing.T) {
 				var restored User
 				require.NoError(t, DB.First(&restored, invitee.Id).Error)
 				assert.Equal(t, inviter.Id, restored.InviterId)
+				assert.Nil(t, restored.RebatePercent)
 				assert.Zero(t, restored.ArrivalTotal)
 				require.True(t, DB.Migrator().HasIndex(&ArrivalEvent{}, "idx_arrival_source"))
 				require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Unscoped().Delete(&User{}).Error)
@@ -222,27 +224,53 @@ func TestArrivalRebateDatabaseMatrix(t *testing.T) {
 	}
 }
 
-func TestArrivalRebateGlobalFirstRule(t *testing.T) {
+func TestArrivalRebateFirstAndOverrideMatrix(t *testing.T) {
 	arrivalFixture(t, "sqlite")
 	inviter, invitee := arrivalUsers(t)
 	cfg := operation_setting.GetRebateSetting()
-	cfg.Enabled, cfg.Rule = false, "first"
+	cfg.Enabled = false
+	cfg.Rule = "first"
 	input := ArrivalInput{Source: "online", Reference: "disabled-first", UserId: invitee.Id, Quota: 1, Payment: NewPaymentReceipt(decimal.NewFromInt(10), "CNY", "provider_payment"), Participate: true}
 	first := recordArrival(t, input)
 	assert.True(t, first.RebateQualified)
 	assert.Equal(t, "disabled", first.Reason)
-	cfg.Enabled = true
+	require.NoError(t, SetInviterRebateOverride(inviter.Id, "on", nil))
 	input.Reference = "enabled-later"
-	assert.Equal(t, "not_first_qualified_success", recordArrival(t, input).Reason)
-	cfg.Rule, cfg.Percent = "every", 0
+	later := recordArrival(t, input)
+	assert.Equal(t, "not_first_qualified_success", later.Reason)
+	assert.Zero(t, later.Reward)
+	zero := 0.0
+	custom := 25.0
+	for _, global := range []bool{false, true} {
+		for _, mode := range []string{"inherit", "on", "off"} {
+			for _, percent := range []*float64{nil, &zero, &custom} {
+				cfg.Enabled = global
+				effective := EffectiveRebate(&User{RebateMode: mode, RebatePercent: percent})
+				assert.Equal(t, mode == "on" || mode == "inherit" && global, effective.Enabled)
+				expected := cfg.Percent
+				if percent != nil {
+					expected = *percent
+				}
+				assert.Equal(t, expected, effective.Percent)
+				assert.Equal(t, "first", effective.Rule)
+			}
+		}
+	}
+	cfg.Rule = "every"
+	cfg.Enabled = false
+	require.NoError(t, SetInviterRebateOverride(inviter.Id, "on", &zero))
 	input.Reference = "zero"
-	assert.Zero(t, recordArrival(t, input).Reward)
-	cfg.Percent = 10
-	input.Reference = "wallet"
 	event := recordArrival(t, input)
+	assert.Equal(t, 0.0, event.Percent)
+	assert.Zero(t, event.Reward)
+	assert.Equal(t, "zero_reward_or_cap_reached", event.Reason)
+	require.NoError(t, SetInviterRebateOverride(inviter.Id, "on", nil))
+	input.Reference = "inherit-percent"
+	event = recordArrival(t, input)
+	assert.Equal(t, 100, event.Reward)
 	require.NoError(t, PayArrivalRebate(event.Id))
 	cfg.Destination = "affiliate"
-	input.Reference = "affiliate"
+	input.Reference = "affiliate-destination"
 	event = recordArrival(t, input)
 	require.NoError(t, PayArrivalRebate(event.Id))
 	var recipient User
@@ -250,6 +278,22 @@ func TestArrivalRebateGlobalFirstRule(t *testing.T) {
 	assert.Equal(t, 100, recipient.Quota)
 	assert.Equal(t, 100, recipient.AffQuota)
 	assert.Equal(t, 200, recipient.AffHistoryQuota)
+	input.Source = "redemption"
+	input.Reference = "historical-no-price"
+	input.Payment = nil
+	event = recordArrival(t, input)
+	assert.False(t, event.RebateQualified)
+	assert.Equal(t, "unavailable", event.AmountEvidence)
+	input.Payment = NewPaymentReceipt(decimal.NewFromInt(10), "CNY", "registered_sale")
+	input.Reference = "opt-out"
+	input.Participate = false
+	event = recordArrival(t, input)
+	assert.False(t, event.RebateQualified)
+	cfg.Redemption = false
+	input.Reference = "source-off"
+	input.Participate = true
+	event = recordArrival(t, input)
+	assert.False(t, event.RebateQualified)
 }
 
 func TestArrivalRebateFourSourceHooks(t *testing.T) {

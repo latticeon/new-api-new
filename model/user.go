@@ -105,6 +105,8 @@ type User struct {
 	InviterId            int                        `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
 	ArrivalTotal         int                        `json:"arrival_total" gorm:"type:bigint;not null;default:0"`
 	EarnedGroup          string                     `json:"earned_group" gorm:"type:varchar(64)"`
+	RebateMode           string                     `json:"rebate_mode" gorm:"type:varchar(16)"` // empty/inherit, on, off; belongs to inviter
+	RebatePercent        *float64                   `json:"rebate_percent"`                      // nil inherits, explicit zero is retained
 	DeletedAt            gorm.DeletedAt             `gorm:"index"`
 	LinuxDOId            string                     `json:"linux_do_id" gorm:"column:linux_do_id;index"`
 	Setting              string                     `json:"setting" gorm:"type:text;column:setting"`

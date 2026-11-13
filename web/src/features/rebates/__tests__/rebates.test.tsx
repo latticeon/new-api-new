@@ -31,6 +31,10 @@ import { api } from '@/lib/api'
 import * as serverErrors from '@/lib/handle-server-error'
 
 import { RebateReportDialog } from '../rebate-report-dialog'
+import {
+  RebateOverrideDialog,
+  SelfRebateRuleDialog,
+} from '../rebate-rule-dialog'
 
 const clients: QueryClient[] = []
 afterEach(() => {
@@ -127,6 +131,88 @@ it('shows protected report errors without fabricated data when the server denies
   renderWithQuery(<RebateReportDialog open onOpenChange={() => {}} />)
   expect(await screen.findByRole('button', { name: 'Retry' })).toBeVisible()
   expect(screen.queryByRole('table')).not.toBeInTheDocument()
+})
+
+it('saves explicit zero separately from an empty inherited percentage', async () => {
+  const put = vi
+    .spyOn(api, 'put')
+    .mockResolvedValue({ data: { success: true } })
+  const close = vi.fn()
+  const rendered = renderWithQuery(
+    <RebateOverrideDialog
+      open
+      onOpenChange={close}
+      userId={7}
+      mode='on'
+      percent={0}
+    />
+  )
+  expect(screen.getByLabelText('Rebate percentage')).toHaveValue(0)
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() =>
+    expect(put).toHaveBeenCalledWith('/api/user/7/rebate', {
+      mode: 'on',
+      percent: 0,
+    })
+  )
+  rendered.unmount()
+  renderWithQuery(
+    <RebateOverrideDialog
+      open
+      onOpenChange={close}
+      userId={7}
+      mode='inherit'
+      percent={null}
+    />
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() =>
+    expect(put).toHaveBeenLastCalledWith('/api/user/7/rebate', {
+      mode: 'inherit',
+      percent: null,
+    })
+  )
+})
+
+it('does not report save success when the override API rejects the change', async () => {
+  vi.spyOn(api, 'put').mockResolvedValue({
+    data: { success: false, message: 'No permission' },
+  })
+  const close = vi.fn()
+  renderWithQuery(<RebateOverrideDialog open onOpenChange={close} userId={7} />)
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(api.put).toHaveBeenCalled())
+  expect(close).not.toHaveBeenCalled()
+})
+
+it('loads only the current account effective rule and exposes no editing controls', async () => {
+  const get = vi.spyOn(api, 'get').mockResolvedValue({
+    data: {
+      success: true,
+      data: {
+        mode: 'on',
+        percent: 0,
+        compliance_confirmed: true,
+        effective: {
+          enabled: true,
+          percent: 0,
+          rule: 'first',
+          max_per_invitee: 0,
+          quota_per_yuan: 500000,
+          destination: 'wallet',
+          online: true,
+          subscription: true,
+          redemption: false,
+          admin: false,
+        },
+      },
+    },
+  })
+  renderWithQuery(<SelfRebateRuleDialog open onOpenChange={() => {}} />)
+  expect(await screen.findByText('0%')).toBeVisible()
+  expect(get).toHaveBeenCalledWith('/api/user/self/rebate')
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
 })
 
 it('keeps a failed pending reward retry visible and reports the server reason', async () => {
