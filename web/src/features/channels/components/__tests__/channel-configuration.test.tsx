@@ -48,6 +48,7 @@ import {
   CHANNEL_TYPE_SGLANG,
   CHANNEL_TYPE_VLLM,
 } from '../../constants'
+import { transformChannelToFormDefaults } from '../../lib/channel-form'
 import { channelSchema, type Channel } from '../../types'
 import { ChannelPluginExtensions } from '../channel-plugin-extensions'
 import { ChannelsProvider } from '../channels-provider'
@@ -1699,6 +1700,43 @@ test('request processing configuration does not mark the network category as con
     screen.getByRole('tab', { name: /Request & Response/ })
   ).not.toHaveAccessibleName(/Configured/)
 })
+
+test.each([undefined, true, false])(
+  'zero output billing setting %s can be toggled, saved and reloaded',
+  async (enabled) => {
+    editingChannel = {
+      ...editingChannel,
+      setting: JSON.stringify({ zero_output_no_billing: enabled }),
+      param_override: '{}',
+      header_override: '{}',
+    }
+    const put = vi
+      .spyOn(api, 'put')
+      .mockResolvedValue({ data: { success: true } })
+    const user = userEvent.setup()
+    render(<ConfigurationHarness currentRow={editingChannel} />)
+    await screen.findByDisplayValue('Existing channel')
+    await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+    const toggle = screen.getByRole('switch', {
+      name: 'Waive charges for zero output tokens',
+    })
+    expect(toggle).toHaveAttribute('aria-checked', String(enabled === true))
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-checked', String(enabled !== true))
+    await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+    await waitFor(() => expect(put).toHaveBeenCalled())
+    const payload = put.mock.calls[0]?.[1] as { setting: string }
+    expect(JSON.parse(payload.setting).zero_output_no_billing).toBe(
+      enabled !== true
+    )
+    expect(
+      transformChannelToFormDefaults({
+        ...editingChannel,
+        setting: payload.setting,
+      }).zero_output_no_billing
+    ).toBe(enabled !== true)
+  }
+)
 
 test.each([1, 57, 58, 59, 60])(
   'provider %s marks a saved Responses WebSocket setting in Request & Response and clears the mark when disabled',

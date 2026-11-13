@@ -7787,6 +7787,8 @@
     "Pause new API executions": "Suspendre les nouvelles exécutions API",
     "Existing generations may finish. Management and existing task queries and downloads remain available.": "Les générations en cours peuvent se terminer. La gestion, la consultation et le téléchargement des tâches existantes restent disponibles.",
     "Maintenance message": "Message de maintenance",
-    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Renvoyé aux clients API avec le statut service indisponible. Laisser vide pour utiliser le message par défaut."
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Renvoyé aux clients API avec le statut service indisponible. Laisser vide pour utiliser le message par défaut.",
+    "Waive charges for zero output tokens": "Exonérer les appels sans jeton de sortie",
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Rembourser intégralement l’appel texte si le nombre final de jetons de sortie consigné est nul ou absent. La facturation des images et vidéos reste inchangée."
   }
 }

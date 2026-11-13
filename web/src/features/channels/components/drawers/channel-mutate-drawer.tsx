@@ -342,6 +342,7 @@ const SENSITIVE_FORM_FIELDS = [
   'tls_insecure_skip_verify',
   'pass_through_body_enabled',
   'responses_websocket_enabled',
+  'zero_output_no_billing',
   'system_prompt',
   'system_prompt_override',
   'allow_service_tier',
@@ -2069,6 +2070,35 @@ export function ChannelMutateDrawer({
               disabled={sensitiveLocked}
               checked={field.value}
               onCheckedChange={field.onChange}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const zeroOutputBillingFields = (
+    <FormField
+      control={form.control}
+      name='zero_output_no_billing'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Waive charges for zero output tokens')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked || isSubmitting}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
             />
           </FormControl>
         </FormItem>
@@ -5038,6 +5068,7 @@ export function ChannelMutateDrawer({
                 {formatFields}
                 {ollamaOpenAIChatFields}
                 {thinkingFields}
+                {zeroOutputBillingFields}
                 {passthroughFields}
                 {systemPromptFields}
                 {systemPromptOverrideFields}

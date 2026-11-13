@@ -19,8 +19,11 @@ type ChannelSettings struct {
 	Proxy                     string `json:"proxy"`
 	PassThroughBodyEnabled    bool   `json:"pass_through_body_enabled,omitempty"`
 	ResponsesWebSocketEnabled bool   `json:"responses_websocket_enabled,omitempty"`
-	SystemPrompt              string `json:"system_prompt,omitempty"`
-	SystemPromptOverride      bool   `json:"system_prompt_override,omitempty"`
+	// ZeroOutputNoBilling waives text settlement when the final consume-log
+	// completion token count is zero. Media/task billing is not affected.
+	ZeroOutputNoBilling  bool   `json:"zero_output_no_billing,omitempty"`
+	SystemPrompt         string `json:"system_prompt,omitempty"`
+	SystemPromptOverride bool   `json:"system_prompt_override,omitempty"`
 	// TaskExtendPluginKeys lists the task plugins a New API channel (type 60)
 	// is extended with. The upstream gateway may host many plugins, so the
 	// channel serves every listed plugin's models while the request still pins

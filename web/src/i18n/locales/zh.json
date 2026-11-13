@@ -7787,6 +7787,8 @@
     "Pause new API executions": "暂停新的 API 执行",
     "Existing generations may finish. Management and existing task queries and downloads remain available.": "现有生成任务可继续完成。管理功能、现有任务查询和下载仍可使用。",
     "Maintenance message": "维护提示",
-    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "以服务不可用状态返回给 API 客户端。留空以使用默认提示。"
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "以服务不可用状态返回给 API 客户端。留空以使用默认提示。",
+    "Waive charges for zero output tokens": "零输出令牌免收费",
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "最终日志中的输出令牌数为零或缺失时，退还整次文本调用费用。不影响图像和视频计费。"
   }
 }

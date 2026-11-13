@@ -115,6 +115,9 @@ func runFixedPriceAccountingCases(t *testing.T, db, logDB *gorm.DB) {
 		want                                      int
 		unit                                      billingexpr.BillingUnit
 		requestedImages, actualImages             int
+		zeroOutputNoBilling                       bool
+		mode                                      int
+		body                                      string
 	}{
 		{name: "missing usage charges once", expression: flat, want: 5000, unit: billingexpr.BillingUnitRequest},
 		{name: "zero usage charges once", expression: flat, usage: &dto.Usage{}, want: 5000, unit: billingexpr.BillingUnitRequest},
@@ -142,6 +145,14 @@ func runFixedPriceAccountingCases(t *testing.T, db, logDB *gorm.DB) {
 		{name: "image override cannot exceed remaining wallet", expression: `tier("image", fixed(0.04)) * image_count`, requestedImages: 1, outboundImages: 4, wallet: 40000, reserveInsufficient: true, refund: true},
 		{name: "task retry holds a pricier channel and refunds all of it", expression: flat, retryReservation: 40000, refund: true},
 		{name: "task retry cannot exceed remaining wallet", expression: flat, retryReservation: 40000, wallet: 20000, reserveInsufficient: true, refund: true},
+		{name: "zero output policy refunds missing usage", expression: flat, zeroOutputNoBilling: true, unit: billingexpr.BillingUnitRequest},
+		{name: "zero output policy refunds zero usage", expression: flat, usage: &dto.Usage{}, zeroOutputNoBilling: true, unit: billingexpr.BillingUnitRequest},
+		{name: "zero output policy refunds input and tools", expression: flat, usage: &dto.Usage{PromptTokens: 100, TotalTokens: 100}, tool: true, zeroOutputNoBilling: true, unit: billingexpr.BillingUnitRequest},
+		{name: "zero output policy refunds stream token fallback", expression: mixed, estimate: 50000, stream: true, usage: &dto.Usage{PromptTokens: 50000, TotalTokens: 50000}, zeroOutputNoBilling: true, unit: billingexpr.BillingUnitToken},
+		{name: "zero output policy preserves positive tokens and literal zero answer", expression: flat, stream: true, usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 1, TotalTokens: 101}, body: `{"choices":[{"message":{"content":"0"}}]}`, zeroOutputNoBilling: true, want: 5000, unit: billingexpr.BillingUnitRequest},
+		{name: "zero output policy uses logged canonical completion", expression: flat, usage: &dto.Usage{CompletionTokens: 99, BillingUsage: dto.NewOpenAIChatBillingUsage(&dto.Usage{PromptTokens: 100, TotalTokens: 100})}, zeroOutputNoBilling: true, unit: billingexpr.BillingUnitRequest},
+		{name: "zero output policy leaves image quantity billing intact", expression: `tier("image", fixed(0.04)) * image_count`, requestedImages: 3, mode: relayconstant.RelayModeImagesGenerations, zeroOutputNoBilling: true, want: 60000, unit: billingexpr.BillingUnitRequest},
+		{name: "zero output policy leaves video billing intact", expression: flat, mode: relayconstant.RelayModeVideoSubmit, zeroOutputNoBilling: true, want: 5000, unit: billingexpr.BillingUnitRequest},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			quota := startingQuota
@@ -178,8 +189,17 @@ func runFixedPriceAccountingCases(t *testing.T, db, logDB *gorm.DB) {
 			snapshot := &billingexpr.BillingSnapshot{BillingMode: "tiered_expr", ExprString: tc.expression, ExprHash: billingexpr.ExprHashString(tc.expression), QuotaPerUnit: common.QuotaPerUnit, GroupRatio: group, EstimatedTier: trace.MatchedTier, EstimatedBillingUnit: trace.BillingUnit, EstimatedFixedPrice: trace.FixedPrice, EstimatedQuotaAfterGroup: reservation}
 			snapshot.EstimatedImageCount = trace.ImageCount
 			info := &relaycommon.RelayInfo{UserId: user.Id, TokenId: token.Id, TokenKey: token.Key, ChannelMeta: &relaycommon.ChannelMeta{ChannelId: channel.Id}, OriginModelName: "fixed-test", UsingGroup: "default", UserGroup: "default", UserSetting: dto.UserSetting{BillingPreference: "wallet_only"}, ForcePreConsume: true, StartTime: time.Now(), IsStream: tc.stream, RelayFormat: types.RelayFormatOpenAI, PriceData: hosttypes.PriceData{GroupRatioInfo: hosttypes.GroupRatioInfo{GroupRatio: group}}, TieredBillingSnapshot: snapshot, BillingRequestInput: request}
+			info.RelayMode = relayconstant.RelayModeChatCompletions
+			if tc.mode != 0 {
+				info.RelayMode = tc.mode
+			}
+			info.ChannelSetting.ZeroOutputNoBilling = tc.zeroOutputNoBilling
 			info.SetEstimatePromptTokens(tc.estimate)
-			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			recorder := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(recorder)
+			if tc.body != "" {
+				ctx.Writer.WriteString(tc.body)
+			}
 			ctx.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
 			if tc.expression == imageExpression {
 				ctx.Request.URL.Path = "/v1/images/generations"
@@ -247,7 +267,13 @@ func runFixedPriceAccountingCases(t *testing.T, db, logDB *gorm.DB) {
 					} else if tc.audio {
 						PostAudioConsumeQuota(ctx, info, tc.usage, nil)
 					} else {
+						originalUsage, err := common.Marshal(tc.usage)
+						require.NoError(t, err)
 						PostTextConsumeQuota(ctx, info, tc.usage, nil)
+						unchangedUsage, err := common.Marshal(tc.usage)
+						require.NoError(t, err)
+						assert.Equal(t, string(originalUsage), string(unchangedUsage), "settlement must preserve usage")
+						assert.Equal(t, tc.body, recorder.Body.String(), "settlement must preserve response")
 					}
 					require.NoError(t, info.Billing.Settle(tc.want), "a repeated settlement must not charge again")
 					var log model.Log
@@ -258,6 +284,16 @@ func runFixedPriceAccountingCases(t *testing.T, db, logDB *gorm.DB) {
 					var other map[string]any
 					require.NoError(t, common.UnmarshalJsonStr(log.Other, &other))
 					assert.Equal(t, string(tc.unit), other["billing_unit"])
+					waived := tc.zeroOutputNoBilling && tc.mode == 0 && (tc.usage == nil || effectiveBillingUsage(tc.usage).CompletionTokens == 0)
+					if waived {
+						assert.Equal(t, "zero_output_tokens", other["billing_waiver"])
+						assert.Contains(t, log.Content, "No charge: final logged output token count is zero or missing")
+					} else {
+						assert.NotContains(t, other, "billing_waiver")
+					}
+					if tc.usage != nil {
+						assert.Equal(t, effectiveBillingUsage(tc.usage).CompletionTokens, log.CompletionTokens)
+					}
 					if tc.requestedImages > 0 {
 						count := tc.actualImages
 						if count == 0 {

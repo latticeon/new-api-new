@@ -454,6 +454,20 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		q := decimal.NewFromFloat(summary.AudioInputPrice).Div(decimal.NewFromInt(1000000)).Mul(decimal.NewFromInt(int64(summary.AudioTokens))).Mul(decimal.NewFromFloat(summary.GroupRatio)).Mul(decimal.NewFromFloat(common.QuotaPerUnit))
 		extraContent = append(extraContent, common.NewMessage("Audio input cost {{quota}}", map[string]any{"quota": logger.FormatQuota(common.QuotaFromDecimal(q))}))
 	}
+	// Decide from the exact completion count written below, after all pricing
+	// calculations but before accounting or settlement. Never inspect answer text
+	// or mutate upstream usage, and do not apply this policy to media/tasks.
+	zeroOutputWaived := false
+	if relayInfo.ChannelMeta != nil && relayInfo.ChannelSetting.ZeroOutputNoBilling && summary.CompletionTokens == 0 {
+		switch relayInfo.RelayMode {
+		case relayconstant.RelayModeChatCompletions, relayconstant.RelayModeCompletions,
+			relayconstant.RelayModeEdits, relayconstant.RelayModeResponses,
+			relayconstant.RelayModeResponsesCompact, relayconstant.RelayModeGemini:
+			zeroOutputWaived = true
+			summary.Quota = 0
+			extraContent = append(extraContent, common.NewMessage("No charge: final logged output token count is zero or missing"))
+		}
+	}
 
 	if !summary.hasBillableUsage() {
 		extraContent = append(extraContent, common.NewMessage("Upstream returned no usage, so nothing was charged (possibly an upstream timeout)"))
@@ -491,6 +505,9 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		other = GenerateTextOtherInfo(ctx, relayInfo, summary.ModelRatio, summary.GroupRatio, summary.CompletionRatio, summary.CacheTokens, summary.CacheRatio, summary.ModelPrice, relayInfo.PriceData.GroupRatioInfo.GroupSpecialRatio)
 	}
 	appendUsageBillingPathForLog(other, common.GetContextKeyBool(ctx, constant.ContextKeyLocalCountTokens), originUsage)
+	if zeroOutputWaived {
+		other.SetPublic("billing_waiver", "zero_output_tokens")
+	}
 	if adminRejectReason != "" {
 		other.SetAdmin("reject_reason", adminRejectReason)
 	}

@@ -7787,6 +7787,8 @@
     "Pause new API executions": "Tạm dừng thực thi API mới",
     "Existing generations may finish. Management and existing task queries and downloads remain available.": "Các lượt tạo đang chạy có thể hoàn tất. Chức năng quản lý, truy vấn và tải xuống tác vụ hiện có vẫn khả dụng.",
     "Maintenance message": "Thông báo bảo trì",
-    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Trả về cho máy khách API với trạng thái dịch vụ không khả dụng. Để trống để dùng thông báo mặc định."
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Trả về cho máy khách API với trạng thái dịch vụ không khả dụng. Để trống để dùng thông báo mặc định.",
+    "Waive charges for zero output tokens": "Miễn phí khi không có token đầu ra",
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Hoàn toàn bộ phí gọi văn bản nếu số token đầu ra cuối cùng trong nhật ký bằng không hoặc bị thiếu. Không ảnh hưởng đến phí hình ảnh và video."
   }
 }

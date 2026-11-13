@@ -7787,6 +7787,8 @@
     "Pause new API executions": "新規 API 実行を一時停止",
     "Existing generations may finish. Management and existing task queries and downloads remain available.": "実行中の生成は完了できます。管理機能、既存タスクの照会とダウンロードは引き続き利用できます。",
     "Maintenance message": "メンテナンスメッセージ",
-    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "サービス利用不可のステータスとともに API クライアントに返されます。空欄の場合は既定のメッセージを使用します。"
+    "Returned to API clients with service unavailable status. Leave empty to use the default message.": "サービス利用不可のステータスとともに API クライアントに返されます。空欄の場合は既定のメッセージを使用します。",
+    "Waive charges for zero output tokens": "出力トークンがゼロの場合は課金しない",
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "最終ログの出力トークン数がゼロまたは未記録の場合、テキスト呼び出しの料金を全額返金します。画像と動画の課金には影響しません。"
   }
 }
