@@ -7867,6 +7867,16 @@
     "Redemption codes — registered sale price (CNY)": "Mã đổi — giá bán đã đăng ký (CNY)",
     "Administrator additions — declared received amount (CNY)": "Cộng hạn mức bởi quản trị viên — số tiền nhận khai báo (CNY)",
     "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.": "Số tiền đăng ký là khai báo của quản trị viên, không phải thanh toán trực tuyến đã xác minh. Khoản trừ không được hưởng hoa hồng.",
-    "Enter a rebate percentage from 0 to 100": "Nhập tỷ lệ hoa hồng từ 0 đến 100"
+    "Enter a rebate percentage from 0 to 100": "Nhập tỷ lệ hoa hồng từ 0 đến 100",
+    "Account overview": "Tổng quan tài khoản",
+    "Verification not recorded": "Chưa ghi nhận xác minh",
+    "Invitation code": "Mã mời",
+    "Pending invitation quota": "Hạn mức mời chờ nhận",
+    "Invited users": "Người dùng được mời",
+    "Inviter ID": "ID người mời",
+    "User not found": "Không tìm thấy người dùng",
+    "Read-only account and invitation information": "Thông tin tài khoản và lời mời chỉ đọc",
+    "Email verification status": "Trạng thái xác minh email",
+    "Total invitation earnings": "Tổng thu nhập từ lời mời"
   }
 }

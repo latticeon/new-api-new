@@ -7867,6 +7867,16 @@
     "Redemption codes — registered sale price (CNY)": "Codes d’échange — prix de vente enregistré (CNY)",
     "Administrator additions — declared received amount (CNY)": "Ajouts administrateur — montant reçu déclaré (CNY)",
     "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.": "Les montants enregistrés sont des déclarations administrateur, pas des paiements en ligne vérifiés. Les déductions sont exclues des commissions.",
-    "Enter a rebate percentage from 0 to 100": "Saisissez un taux de commission entre 0 et 100"
+    "Enter a rebate percentage from 0 to 100": "Saisissez un taux de commission entre 0 et 100",
+    "Account overview": "Vue d’ensemble du compte",
+    "Verification not recorded": "Vérification non enregistrée",
+    "Invitation code": "Code d’invitation",
+    "Pending invitation quota": "Quota d’invitation à percevoir",
+    "Invited users": "Utilisateurs invités",
+    "Inviter ID": "ID du parrain",
+    "User not found": "Utilisateur introuvable",
+    "Read-only account and invitation information": "Informations de compte et d’invitation en lecture seule",
+    "Email verification status": "Statut de vérification de l’e-mail",
+    "Total invitation earnings": "Gains cumulés des invitations"
   }
 }

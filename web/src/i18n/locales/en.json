@@ -7867,6 +7867,16 @@
     "Redemption codes — registered sale price (CNY)": "Redemption codes — registered sale price (CNY)",
     "Administrator additions — declared received amount (CNY)": "Administrator additions — declared received amount (CNY)",
     "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.": "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.",
-    "Enter a rebate percentage from 0 to 100": "Enter a rebate percentage from 0 to 100"
+    "Enter a rebate percentage from 0 to 100": "Enter a rebate percentage from 0 to 100",
+    "Account overview": "Account overview",
+    "Verification not recorded": "Verification not recorded",
+    "Invitation code": "Invitation code",
+    "Pending invitation quota": "Pending invitation quota",
+    "Invited users": "Invited users",
+    "Inviter ID": "Inviter ID",
+    "User not found": "User not found",
+    "Read-only account and invitation information": "Read-only account and invitation information",
+    "Email verification status": "Email verification status",
+    "Total invitation earnings": "Total invitation earnings"
   }
 }

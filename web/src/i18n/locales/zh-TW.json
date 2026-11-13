@@ -7867,6 +7867,16 @@
     "Redemption codes — registered sale price (CNY)": "兌換碼 — 登記售價（人民幣）",
     "Administrator additions — declared received amount (CNY)": "管理員加額 — 登記收款金額（人民幣）",
     "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.": "登記金額由管理員申報，並非已驗證的線上付款。減額不參與返利。",
-    "Enter a rebate percentage from 0 to 100": "請輸入 0 到 100 之間的返利比例"
+    "Enter a rebate percentage from 0 to 100": "請輸入 0 到 100 之間的返利比例",
+    "Account overview": "帳戶概覽",
+    "Verification not recorded": "未記錄驗證狀態",
+    "Invitation code": "邀請碼",
+    "Pending invitation quota": "待領取邀請額度",
+    "Invited users": "受邀使用者",
+    "Inviter ID": "邀請人 ID",
+    "User not found": "找不到使用者",
+    "Read-only account and invitation information": "唯讀帳戶與邀請資訊",
+    "Email verification status": "電子郵件驗證狀態",
+    "Total invitation earnings": "邀請累計收益"
   }
 }

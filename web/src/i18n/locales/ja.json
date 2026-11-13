@@ -7867,6 +7867,16 @@
     "Redemption codes — registered sale price (CNY)": "引き換えコード — 登録販売価格（CNY）",
     "Administrator additions — declared received amount (CNY)": "管理者による加算 — 申告受領額（CNY）",
     "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.": "登録金額は管理者の申告であり、確認済みのオンライン決済ではありません。減算は還元の対象外です。",
-    "Enter a rebate percentage from 0 to 100": "0～100の還元率を入力してください"
+    "Enter a rebate percentage from 0 to 100": "0～100の還元率を入力してください",
+    "Account overview": "アカウント概要",
+    "Verification not recorded": "認証記録なし",
+    "Invitation code": "招待コード",
+    "Pending invitation quota": "未受領の招待クォータ",
+    "Invited users": "招待されたユーザー",
+    "Inviter ID": "招待者 ID",
+    "User not found": "ユーザーが見つかりません",
+    "Read-only account and invitation information": "閲覧専用のアカウント・招待情報",
+    "Email verification status": "メール認証状況",
+    "Total invitation earnings": "招待による累計収益"
   }
 }

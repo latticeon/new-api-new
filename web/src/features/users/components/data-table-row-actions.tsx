@@ -61,6 +61,7 @@ import {
 import { getUserActionMessage } from '../lib'
 import type { User } from '../types'
 import { UserBindingDialog } from './dialogs/user-binding-dialog'
+import { UserOverviewDialog } from './dialogs/user-overview-dialog'
 import { useUsers } from './users-provider'
 
 const MANAGE_ACTION_TITLES: Record<AdminUserManageAction, string> = {
@@ -88,6 +89,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [resetTwoFAOpen, setResetTwoFAOpen] = useState(false)
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false)
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false)
+  const [overviewOpen, setOverviewOpen] = useState(false)
 
   const handleEdit = () => {
     setCurrentRow(user)
@@ -214,6 +216,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         ariaLabel={t('Open menu')}
         contentClassName='w-48'
       >
+        <DropdownMenuItem onClick={() => setOverviewOpen(true)}>
+          {t('Account overview')}
+        </DropdownMenuItem>
         {isDisabled ? (
           <DropdownMenuItem onClick={() => handleManage('enable')}>
             {t('Enable')}
@@ -317,6 +322,11 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuItem>
       </DataTableRowActionMenu>
 
+      <UserOverviewDialog
+        open={overviewOpen}
+        onOpenChange={setOverviewOpen}
+        userId={user.id}
+      />
       <ConfirmDialog
         open={resetPasskeyOpen && !verificationActive}
         onOpenChange={setResetPasskeyOpen}

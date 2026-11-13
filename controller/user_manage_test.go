@@ -727,3 +727,44 @@ func TestUpdateUserSettingKeepsWhatTheRequestLeavesOut(t *testing.T) {
 		})
 	}
 }
+
+func TestUserOverviewPreservesAccountFactsAndRoleBoundary(t *testing.T) {
+	db := setupManageUserTestDB(t)
+	user := model.User{Username: "overview-account", Password: "private-password", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", Email: "owner@example.com", RequestCount: 1234, AffCode: "overview-code", AffQuota: 250, AffCount: 3, AffHistoryQuota: 750}
+	require.NoError(t, db.Create(&user).Error)
+	for _, tc := range []struct {
+		name                     string
+		operatorRole, targetRole int
+		allowed                  bool
+	}{
+		{"administrator_reads_member", common.RoleAdminUser, common.RoleCommonUser, true},
+		{"administrator_cannot_read_peer", common.RoleAdminUser, common.RoleAdminUser, false},
+		{"root_reads_administrator", common.RoleRootUser, common.RoleAdminUser, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, db.Model(&user).Update("role", tc.targetRole).Error)
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/user/%d", user.Id), nil)
+			c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(user.Id)}}
+			c.Set("role", tc.operatorRole)
+			GetUser(c)
+			var result struct {
+				Success bool           `json:"success"`
+				Data    map[string]any `json:"data"`
+			}
+			require.NoError(t, common.Unmarshal(recorder.Body.Bytes(), &result))
+			assert.Equal(t, tc.allowed, result.Success)
+			if !tc.allowed {
+				assert.Empty(t, result.Data)
+				return
+			}
+			assert.Equal(t, user.Email, result.Data["email"])
+			assert.Equal(t, float64(1234), result.Data["request_count"])
+			assert.Equal(t, user.AffCode, result.Data["aff_code"])
+			assert.Equal(t, float64(250), result.Data["aff_quota"])
+			assert.NotContains(t, recorder.Body.String(), "private-password")
+			assert.NotContains(t, result.Data, "email_verified", "unknown historical verification must not be fabricated")
+		})
+	}
+}

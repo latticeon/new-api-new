@@ -32,8 +32,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { toIntlLocale } from '@/i18n/languages'
 import { getCurrencyDisplay } from '@/lib/currency'
-import { formatQuota } from '@/lib/format'
+import { formatNumber, formatQuota } from '@/lib/format'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
 import {
@@ -47,7 +48,8 @@ import { DataTableRowActions } from './data-table-row-actions'
 import { UserQuotaCell } from './user-quota-cell'
 
 export function useUsersColumns(): ColumnDef<User>[] {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   const currencyConfig = useSystemConfigStore((state) => state.config.currency)
   const { meta: currency } = getCurrencyDisplay()
   const quotaUnit = currency.kind === 'tokens' ? t('Tokens') : currency.symbol
@@ -141,6 +143,29 @@ export function useUsersColumns(): ColumnDef<User>[] {
         meta: { mobileTitle: true },
       },
       {
+        accessorKey: 'email',
+        header: t('Email'),
+        cell: ({ row }) => (
+          <div className='space-y-1 text-sm'>
+            <LongText>{row.original.email || '—'}</LongText>
+            <div className='text-muted-foreground text-xs'>
+              {row.original.email
+                ? t('Verification not recorded')
+                : t('Not bound')}
+            </div>
+          </div>
+        ),
+        enableSorting: false,
+        size: 210,
+      },
+      {
+        accessorKey: 'request_count',
+        header: t('Requests'),
+        cell: ({ row }) => formatNumber(row.original.request_count, locale),
+        enableSorting: false,
+        size: 110,
+      },
+      {
         accessorKey: 'status',
         header: t('Status'),
         cell: ({ row }) => {
@@ -169,7 +194,7 @@ export function useUsersColumns(): ColumnDef<User>[] {
               </TooltipTrigger>
               <TooltipContent>
                 <p className='text-xs'>
-                  {t('Requests:')} {requestCount.toLocaleString()}
+                  {t('Requests:')} {formatNumber(requestCount, locale)}
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -244,7 +269,13 @@ export function useUsersColumns(): ColumnDef<User>[] {
           const affHistoryQuota = user.aff_history_quota || 0
           const inviterId = user.inviter_id || 0
 
-          if (affCount === 0 && affHistoryQuota === 0 && inviterId === 0) {
+          if (
+            affCount === 0 &&
+            affHistoryQuota === 0 &&
+            inviterId === 0 &&
+            !user.aff_code &&
+            !user.aff_quota
+          ) {
             return <span className='text-muted-foreground text-sm'>—</span>
           }
 
@@ -253,6 +284,15 @@ export function useUsersColumns(): ColumnDef<User>[] {
               data-table-text='secondary'
               className='min-w-0 space-y-1 text-xs font-normal'
             >
+              {user.aff_code && (
+                <LongText>
+                  {t('Invitation code')}: {user.aff_code}
+                </LongText>
+              )}
+              <LongText>
+                {t('Pending invitation quota')}:{' '}
+                {formatQuota(user.aff_quota ?? 0)}
+              </LongText>
               {(affCount > 0 || affHistoryQuota !== 0) && (
                 <LongText>
                   {t('Invited {{count}} users', { count: affCount })} ·{' '}
@@ -298,6 +338,6 @@ export function useUsersColumns(): ColumnDef<User>[] {
     ],
     // formatQuota reads the currency configuration from the store.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, quotaUnit, currencyConfig]
+    [t, quotaUnit, currencyConfig, locale]
   )
 }

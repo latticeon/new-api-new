@@ -7867,6 +7867,16 @@
     "Redemption codes — registered sale price (CNY)": "Коды активации — указанная цена продажи (CNY)",
     "Administrator additions — declared received amount (CNY)": "Начисления администратора — заявленная полученная сумма (CNY)",
     "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.": "Указанные суммы являются заявлениями администратора, а не подтверждёнными онлайн-платежами. Списания не дают права на вознаграждение.",
-    "Enter a rebate percentage from 0 to 100": "Введите процент вознаграждения от 0 до 100"
+    "Enter a rebate percentage from 0 to 100": "Введите процент вознаграждения от 0 до 100",
+    "Account overview": "Обзор аккаунта",
+    "Verification not recorded": "Проверка не зафиксирована",
+    "Invitation code": "Код приглашения",
+    "Pending invitation quota": "Квота приглашений к получению",
+    "Invited users": "Приглашённые пользователи",
+    "Inviter ID": "ID пригласившего",
+    "User not found": "Пользователь не найден",
+    "Read-only account and invitation information": "Данные аккаунта и приглашений только для чтения",
+    "Email verification status": "Статус подтверждения почты",
+    "Total invitation earnings": "Общий доход от приглашений"
   }
 }

@@ -7867,6 +7867,16 @@
     "Redemption codes — registered sale price (CNY)": "兑换码 — 登记售价（人民币）",
     "Administrator additions — declared received amount (CNY)": "管理员加额 — 登记收款金额（人民币）",
     "Registered amounts are administrator declarations, not verified online payments. Deductions cannot earn rebates.": "登记金额由管理员申报，并非已验证的在线付款。减额不参与返利。",
-    "Enter a rebate percentage from 0 to 100": "请输入 0 到 100 之间的返利比例"
+    "Enter a rebate percentage from 0 to 100": "请输入 0 到 100 之间的返利比例",
+    "Account overview": "账户概览",
+    "Verification not recorded": "未记录验证状态",
+    "Invitation code": "邀请码",
+    "Pending invitation quota": "待领取邀请额度",
+    "Invited users": "受邀用户",
+    "Inviter ID": "邀请人 ID",
+    "User not found": "未找到用户",
+    "Read-only account and invitation information": "只读账户与邀请信息",
+    "Email verification status": "邮箱验证状态",
+    "Total invitation earnings": "邀请累计收益"
   }
 }
