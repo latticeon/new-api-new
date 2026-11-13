@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -773,46 +774,74 @@ func SumUsedToken(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	return token
 }
 
-func CountOldLog(ctx context.Context, targetTimestamp int64) (int64, error) {
-	var total int64
-	if err := LOG_DB.WithContext(ctx).Model(&Log{}).Where("created_at < ?", targetTimestamp).Count(&total).Error; err != nil {
-		return 0, err
+// LogCleanupTypes is an allowlist, never a list of exclusions: new financial or
+// audit log types remain protected without requiring changes to cleanup code.
+func LogCleanupTypes(logTypes ...int) ([]int, error) {
+	if len(logTypes) == 0 {
+		return []int{LogTypeConsume, LogTypeError}, nil
 	}
-	return total, nil
+	types := make([]int, 0, len(logTypes))
+	for _, logType := range logTypes {
+		if logType != LogTypeConsume && logType != LogTypeError {
+			return nil, common.NewMessage("Only consumption and error logs can be cleaned")
+		}
+		if !slices.Contains(types, logType) {
+			types = append(types, logType)
+		}
+	}
+	return types, nil
 }
 
-func DeleteOldLogBatch(ctx context.Context, targetTimestamp int64, limit int) (int64, error) {
-	if limit <= 0 {
-		limit = 100
+func CountOldLog(ctx context.Context, targetTimestamp int64, logTypes ...int) (int64, error) {
+	types, err := LogCleanupTypes(logTypes...)
+	if err != nil {
+		return 0, err
 	}
-	if nil != ctx.Err() {
-		return 0, ctx.Err()
-	}
+	var total int64
+	err = LOG_DB.WithContext(ctx).Model(&Log{}).
+		Where("created_at < ? AND type IN ?", targetTimestamp, types).Count(&total).Error
+	return total, err
+}
 
+func DeleteOldLogBatch(ctx context.Context, targetTimestamp int64, limit int, logTypes ...int) (int64, error) {
+	types, err := LogCleanupTypes(logTypes...)
+	if err != nil {
+		return 0, err
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if targetTimestamp <= 0 || targetTimestamp > common.GetTimestamp() {
+		return 0, common.NewMessage("Log cleanup timestamp must be in the past")
+	}
+	limit = min(max(limit, 1), 1000)
 	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-		// ClickHouse DELETE is a heavy mutation that rewrites data parts, so
-		// per-batch mutations would be pathologically slow. Remove all matching
-		// rows in a single synchronous mutation regardless of limit; the reported
-		// count lets the caller's progress loop complete in one pass.
-		total, err := CountOldLog(ctx, targetTimestamp)
-		if err != nil {
+		// Preserve the existing single synchronous mutation path. ClickHouse
+		// rewrites data parts, so issuing one mutation per row batch is harmful.
+		total, err := CountOldLog(ctx, targetTimestamp, types...)
+		if err != nil || total == 0 {
 			return 0, err
 		}
-		if total == 0 {
-			return 0, nil
-		}
 		if err := LOG_DB.WithContext(ctx).Exec(
-			"ALTER TABLE logs DELETE WHERE created_at < ? SETTINGS mutations_sync = 1",
-			targetTimestamp,
+			"ALTER TABLE logs DELETE WHERE created_at < ? AND type IN ? SETTINGS mutations_sync = 1",
+			targetTimestamp, types,
 		).Error; err != nil {
 			return 0, err
 		}
 		return total, nil
 	}
-
-	result := LOG_DB.WithContext(ctx).Where("created_at < ?", targetTimestamp).Limit(limit).Delete(&Log{})
-	if nil != result.Error {
-		return 0, result.Error
+	// DELETE LIMIT is not portable (and ignored by some GORM dialects). Select
+	// a bounded ID batch first and reapply the safety predicate on deletion.
+	var ids []int
+	if err := LOG_DB.WithContext(ctx).Model(&Log{}).
+		Where("created_at < ? AND type IN ?", targetTimestamp, types).
+		Order("id").Limit(limit).Pluck("id", &ids).Error; err != nil {
+		return 0, err
 	}
-	return result.RowsAffected, nil
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	result := LOG_DB.WithContext(ctx).
+		Where("id IN ? AND created_at < ? AND type IN ?", ids, targetTimestamp, types).Delete(&Log{})
+	return result.RowsAffected, result.Error
 }

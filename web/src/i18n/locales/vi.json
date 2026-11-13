@@ -7804,6 +7804,27 @@
     "Request hot restart": "Yêu cầu khởi động lại nóng",
     "Confirm hot restart": "Xác nhận khởi động lại nóng",
     "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "Khởi chạy tiến trình xử lý thay thế? Các luồng hiện tại vẫn ở tiến trình cũ đến khi kết thúc. Quyền điều phối tác vụ nền nghiệp vụ chỉ chuyển giao sau khi các công việc đã nhận hoàn tất.",
-    "Start replacement": "Khởi chạy tiến trình thay thế"
+    "Start replacement": "Khởi chạy tiến trình thay thế",
+    "Only consumption and error logs are eligible. Financial records and security audit logs are protected.": "Chỉ áp dụng cho nhật ký sử dụng và lỗi. Bản ghi tài chính và nhật ký kiểm toán bảo mật được bảo vệ.",
+    "Permanently remove eligible consumption/error logs before {{date}}. Financial and security audit records are protected. This action cannot be undone.": "Xóa vĩnh viễn nhật ký sử dụng và lỗi đủ điều kiện trước {{date}}. Bản ghi tài chính và kiểm toán bảo mật được bảo vệ. Không thể hoàn tác hành động này.",
+    "Database log automatic cleanup": "Tự động dọn nhật ký cơ sở dữ liệu",
+    "Succeeded": "Thành công",
+    "Database log cleanup": "Dọn nhật ký cơ sở dữ liệu",
+    "Runs daily in bounded batches using system tasks. Disabled by default. Only consumption/error logs can be removed; financial, rebate and security audit records are protected. Disk log files are not affected.": "Chạy hằng ngày theo các lô có giới hạn bằng tác vụ hệ thống. Mặc định tắt. Chỉ xóa nhật ký sử dụng và lỗi; các bản ghi tài chính, hoàn thưởng và kiểm toán bảo mật được bảo vệ. Không ảnh hưởng đến tệp nhật ký trên đĩa.",
+    "Automatic database log cleanup": "Tự động dọn nhật ký cơ sở dữ liệu",
+    "Log retention (days)": "Thời gian lưu nhật ký (ngày)",
+    "Log cleanup scope": "Phạm vi dọn nhật ký",
+    "Consumption and error logs": "Nhật ký sử dụng và lỗi",
+    "Consumption logs only": "Chỉ nhật ký sử dụng",
+    "Error logs only": "Chỉ nhật ký lỗi",
+    "Recent log cleanup results": "Kết quả dọn nhật ký gần đây",
+    "Failed to load log cleanup results": "Không thể tải kết quả dọn nhật ký",
+    "No log cleanup tasks yet": "Chưa có tác vụ dọn nhật ký",
+    "Deleted log entries: {{count}}": "Số bản ghi nhật ký đã xóa: {{count}}",
+    "Only consumption and error logs can be cleaned": "Chỉ có thể dọn nhật ký sử dụng và lỗi",
+    "Log cleanup timestamp must be in the past": "Mốc thời gian dọn nhật ký phải ở trong quá khứ",
+    "No log rows were deleted": "Không có bản ghi nhật ký nào bị xóa",
+    "Invalid log cleanup setting": "Cài đặt dọn nhật ký không hợp lệ",
+    "Log retention must be between 1 and 36500 days": "Thời gian lưu nhật ký phải từ 1 đến 36500 ngày"
   }
 }

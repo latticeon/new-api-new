@@ -7804,6 +7804,27 @@
     "Request hot restart": "Запросить горячий перезапуск",
     "Confirm hot restart": "Подтвердить горячий перезапуск",
     "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "Запустить новый рабочий процесс? Текущие потоки останутся в прежнем до завершения. Управление фоновыми бизнес-задачами передаётся только после завершения принятых заданий.",
-    "Start replacement": "Запустить новый процесс"
+    "Start replacement": "Запустить новый процесс",
+    "Only consumption and error logs are eligible. Financial records and security audit logs are protected.": "Очистка доступна только для журналов потребления и ошибок. Финансовые записи и журналы аудита безопасности защищены.",
+    "Permanently remove eligible consumption/error logs before {{date}}. Financial and security audit records are protected. This action cannot be undone.": "Безвозвратно удалить подходящие журналы потребления и ошибок до {{date}}. Финансовые записи и записи аудита безопасности защищены. Это действие нельзя отменить.",
+    "Database log automatic cleanup": "Автоочистка журналов базы данных",
+    "Succeeded": "Успешно",
+    "Database log cleanup": "Очистка журналов базы данных",
+    "Runs daily in bounded batches using system tasks. Disabled by default. Only consumption/error logs can be removed; financial, rebate and security audit records are protected. Disk log files are not affected.": "Ежедневная очистка ограниченными пакетами через системные задачи. По умолчанию отключена. Удаляются только журналы потребления и ошибок; финансовые записи, записи вознаграждений и аудита безопасности защищены. Файлы журналов на диске не затрагиваются.",
+    "Automatic database log cleanup": "Автоматическая очистка журналов базы данных",
+    "Log retention (days)": "Срок хранения журналов (дней)",
+    "Log cleanup scope": "Область очистки журналов",
+    "Consumption and error logs": "Журналы потребления и ошибок",
+    "Consumption logs only": "Только журналы потребления",
+    "Error logs only": "Только журналы ошибок",
+    "Recent log cleanup results": "Последние результаты очистки журналов",
+    "Failed to load log cleanup results": "Не удалось загрузить результаты очистки журналов",
+    "No log cleanup tasks yet": "Задач очистки журналов пока нет",
+    "Deleted log entries: {{count}}": "Удалено записей журнала: {{count}}",
+    "Only consumption and error logs can be cleaned": "Можно очищать только журналы потребления и ошибок",
+    "Log cleanup timestamp must be in the past": "Время отсечения для очистки должно быть в прошлом",
+    "No log rows were deleted": "Записи журнала не были удалены",
+    "Invalid log cleanup setting": "Недопустимая настройка очистки журналов",
+    "Log retention must be between 1 and 36500 days": "Срок хранения журналов должен быть от 1 до 36500 дней"
   }
 }

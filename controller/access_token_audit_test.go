@@ -753,8 +753,13 @@ func TestSecurityAndOperationEventsUseAuditTable(t *testing.T) {
 	var logs []model.Log
 	require.NoError(t, model.LOG_DB.Find(&logs).Error)
 	assert.Len(t, logs, 4)
-	_, err := model.DeleteOldLogBatch(context.Background(), time.Now().Unix()+1, 100)
+	var countBusinessLogs int64
+	require.NoError(t, model.LOG_DB.Model(&model.Log{}).Where("type = ?", model.LogTypeConsume).Update("created_at", time.Now().Add(-time.Hour).Unix()).Error)
+	deleted, err := model.DeleteOldLogBatch(context.Background(), time.Now().Add(-time.Minute).Unix(), 100)
 	require.NoError(t, err)
+	assert.EqualValues(t, 1, deleted)
+	require.NoError(t, model.LOG_DB.Model(&model.Log{}).Count(&countBusinessLogs).Error)
+	assert.EqualValues(t, 3, countBusinessLogs, "financial and system logs remain protected")
 	var count int64
 	require.NoError(t, model.LOG_DB.Model(&model.AuditLog{}).Count(&count).Error)
 	assert.EqualValues(t, 10, count)
@@ -834,6 +839,9 @@ func newAuditTestDatabase(t *testing.T, kind, dsn string) (*gorm.DB, string) {
 		path := t.TempDir() + "/audit.db"
 		db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
 		require.NoError(t, err)
+		connection, err := db.DB()
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, connection.Close()) })
 		return db, path
 	}
 	require.NotEmpty(t, dsn)
@@ -983,6 +991,9 @@ func verifyAuditJSONStorage(t *testing.T) {
 	assert.JSONEq(t, `{}`, string(empty))
 	for range 2 {
 		require.NoError(t, model.InitLogDB())
+		connection, err := model.LOG_DB.DB()
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, connection.Close()) })
 	}
 	entries, total, err = model.GetAuditLogs(filter, 0, 20, common.RoleRootUser)
 	require.NoError(t, err)
@@ -1076,6 +1087,9 @@ func TestAuditDatabaseMatrix(t *testing.T) {
 					}
 					for range 2 {
 						require.NoError(t, model.InitDB())
+						connection, err := model.DB.DB()
+						require.NoError(t, err)
+						t.Cleanup(func() { require.NoError(t, connection.Close()) })
 						require.NoError(t, model.InitLogDB())
 					}
 					if !upgrade {
@@ -1189,7 +1203,15 @@ func TestIndependentAuditLogStores(t *testing.T) {
 				t.Setenv("LOG_SQL_DSN", isolatedDSN)
 				t.Setenv("LOG_SQL_CLICKHOUSE_TTL_DAYS", "7")
 				require.NoError(t, model.InitLogDB())
+				connection, err := model.LOG_DB.DB()
+				require.NoError(t, err)
+				firstConnection := connection
+				t.Cleanup(func() { require.NoError(t, firstConnection.Close()) })
 				require.NoError(t, model.InitLogDB())
+				connection, err = model.LOG_DB.DB()
+				require.NoError(t, err)
+				finalConnection := connection
+				t.Cleanup(func() { require.NoError(t, finalConnection.Close()) })
 				if upgrade {
 					var old model.Log
 					require.NoError(t, model.LOG_DB.Where("request_id = ?", "legacy-split-request").Take(&old).Error)
@@ -1207,7 +1229,7 @@ func TestIndependentAuditLogStores(t *testing.T) {
 				require.NotNil(t, status.LastUsedAt)
 				assert.Equal(t, "192.0.2.8", status.LastUsedIp)
 				model.RecordLog(1, model.LogTypeTopup, common.NewMessage("independent business"))
-				_, err = model.DeleteOldLogBatch(context.Background(), time.Now().Unix()+1, 100)
+				_, err = model.DeleteOldLogBatch(context.Background(), time.Now().Add(-time.Minute).Unix(), 100)
 				require.NoError(t, err)
 				_, total, err = model.GetAuditLogs(model.AuditLogFilter{UserId: 1}, 0, 20, 1)
 				require.NoError(t, err)

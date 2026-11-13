@@ -7804,6 +7804,27 @@
     "Request hot restart": "请求热重启",
     "Confirm hot restart": "确认热重启",
     "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "启动替代工作进程？现有流将保留在旧工作进程直至结束。已接纳的任务完成后才会移交业务后台任务主控权。",
-    "Start replacement": "启动替代进程"
+    "Start replacement": "启动替代进程",
+    "Only consumption and error logs are eligible. Financial records and security audit logs are protected.": "仅可清理消费和错误日志，资金记录和安全审计日志受到保护。",
+    "Permanently remove eligible consumption/error logs before {{date}}. Financial and security audit records are protected. This action cannot be undone.": "永久删除 {{date}} 之前符合条件的消费／错误日志。资金和安全审计记录受到保护。此操作无法撤销。",
+    "Database log automatic cleanup": "数据库日志自动清理",
+    "Succeeded": "已成功",
+    "Database log cleanup": "数据库日志清理",
+    "Runs daily in bounded batches using system tasks. Disabled by default. Only consumption/error logs can be removed; financial, rebate and security audit records are protected. Disk log files are not affected.": "默认关闭，启用后通过系统任务每天分批清理。仅可删除消费／错误日志，资金、返利和安全审计记录受到保护，不影响磁盘日志文件。",
+    "Automatic database log cleanup": "自动清理数据库日志",
+    "Log retention (days)": "日志保留天数",
+    "Log cleanup scope": "日志清理范围",
+    "Consumption and error logs": "消费和错误日志",
+    "Consumption logs only": "仅消费日志",
+    "Error logs only": "仅错误日志",
+    "Recent log cleanup results": "最近日志清理结果",
+    "Failed to load log cleanup results": "加载日志清理结果失败",
+    "No log cleanup tasks yet": "暂无日志清理任务",
+    "Deleted log entries: {{count}}": "已删除日志：{{count}} 条",
+    "Only consumption and error logs can be cleaned": "仅允许清理消费和错误日志",
+    "Log cleanup timestamp must be in the past": "日志清理截止时间必须早于当前时间",
+    "No log rows were deleted": "未删除任何日志记录",
+    "Invalid log cleanup setting": "日志清理设置无效",
+    "Log retention must be between 1 and 36500 days": "日志保留天数必须介于 1 到 36500 天之间"
   }
 }

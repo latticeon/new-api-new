@@ -20,17 +20,8 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DateTimePicker } from '@/components/datetime-picker'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { formatTimestampToDate } from '@/lib/format'
@@ -77,7 +68,11 @@ function isActiveLogCleanupTask(task: LogCleanupTask | null) {
  * The history log module of the log maintenance page. It deletes the logs
  * created before a chosen time as a background task and shows its progress.
  */
-export function HistoryLogCleanup() {
+export function HistoryLogCleanup(
+  props: {
+    scope?: 'consume_error' | 'consume' | 'error'
+  } = {}
+) {
   const { t } = useTranslation()
   const titleId = useId()
   const [purgeDate, setPurgeDate] = useState<Date | undefined>(() =>
@@ -181,7 +176,7 @@ export function HistoryLogCleanup() {
 
     setIsStartingLogCleanup(true)
     try {
-      const res = await startLogCleanupTask(purgeTimestamp)
+      const res = await startLogCleanupTask(purgeTimestamp, props.scope)
       if (!res.success) {
         throw createServerError(res, t('Failed to clean logs'))
       }
@@ -211,7 +206,9 @@ export function HistoryLogCleanup() {
           {t('Clean history logs')}
         </h4>
         <p className='text-muted-foreground mt-1 text-xs'>
-          {t('Remove all log entries created before the selected timestamp.')}
+          {t(
+            'Only consumption and error logs are eligible. Financial records and security audit logs are protected.'
+          )}
         </p>
       </div>
       <DateTimePicker value={purgeDate} onChange={setPurgeDate} />
@@ -260,36 +257,19 @@ export function HistoryLogCleanup() {
         </div>
       )}
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('Confirm log cleanup')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {formattedPurgeDate
-                ? t(
-                    'This will permanently remove all log entries created before {{date}}.',
-                    { date: formattedPurgeDate }
-                  )
-                : t(
-                    'This will permanently remove log entries before the selected timestamp.'
-                  )}{' '}
-              {t('This action cannot be undone.')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isStartingLogCleanup}>
-              {t('Cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant='destructive'
-              onClick={handleCleanLogs}
-              disabled={isStartingLogCleanup}
-            >
-              {isStartingLogCleanup ? t('Cleaning...') : t('Delete logs')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title={t('Confirm log cleanup')}
+        desc={t(
+          'Permanently remove eligible consumption/error logs before {{date}}. Financial and security audit records are protected. This action cannot be undone.',
+          { date: formattedPurgeDate }
+        )}
+        destructive
+        confirmText={isStartingLogCleanup ? t('Cleaning...') : t('Delete logs')}
+        isLoading={isStartingLogCleanup}
+        handleConfirm={handleCleanLogs}
+      />
     </div>
   )
 }

@@ -66,12 +66,18 @@ export async function confirmPaymentCompliance() {
   return res.data
 }
 
-export async function startLogCleanupTask(targetTimestamp: number) {
+export async function startLogCleanupTask(
+  targetTimestamp: number,
+  scope?: 'consume_error' | 'consume' | 'error'
+) {
   const res = await api.post<SystemTaskResponse<LogCleanupTask>>(
     '/api/system-task/log-cleanup',
     null,
     {
-      params: { target_timestamp: targetTimestamp },
+      params: {
+        target_timestamp: targetTimestamp,
+        ...(scope ? { scope } : {}),
+      },
     }
   )
   return res.data

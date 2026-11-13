@@ -29,12 +29,28 @@ import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 import { APIMaintenanceSection } from './api-maintenance-section'
 import { ErrorRewriteSection } from './error-rewrite-section'
+import { LogCleanupSection } from './log-cleanup-section'
 
 const OPERATIONS_SECTIONS = [
   {
     id: 'hot-restart',
     titleKey: 'Linux graceful hot restart',
     build: () => <HotRestartPanel />,
+  },
+  {
+    id: 'log-cleanup',
+    titleKey: 'Database log automatic cleanup',
+    build: (settings: OperationsSettings) => (
+      <LogCleanupSection
+        defaultValues={{
+          'log_setting.auto_cleanup_enabled':
+            settings['log_setting.auto_cleanup_enabled'],
+          'log_setting.cleanup_retention_days':
+            settings['log_setting.cleanup_retention_days'],
+          'log_setting.cleanup_scope': settings['log_setting.cleanup_scope'],
+        }}
+      />
+    ),
   },
   {
     id: 'api-maintenance',

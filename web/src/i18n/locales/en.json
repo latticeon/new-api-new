@@ -7804,6 +7804,27 @@
     "Request hot restart": "Request hot restart",
     "Confirm hot restart": "Confirm hot restart",
     "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.",
-    "Start replacement": "Start replacement"
+    "Start replacement": "Start replacement",
+    "Only consumption and error logs are eligible. Financial records and security audit logs are protected.": "Only consumption and error logs are eligible. Financial records and security audit logs are protected.",
+    "Permanently remove eligible consumption/error logs before {{date}}. Financial and security audit records are protected. This action cannot be undone.": "Permanently remove eligible consumption/error logs before {{date}}. Financial and security audit records are protected. This action cannot be undone.",
+    "Database log automatic cleanup": "Database log automatic cleanup",
+    "Succeeded": "Succeeded",
+    "Database log cleanup": "Database log cleanup",
+    "Runs daily in bounded batches using system tasks. Disabled by default. Only consumption/error logs can be removed; financial, rebate and security audit records are protected. Disk log files are not affected.": "Runs daily in bounded batches using system tasks. Disabled by default. Only consumption/error logs can be removed; financial, rebate and security audit records are protected. Disk log files are not affected.",
+    "Automatic database log cleanup": "Automatic database log cleanup",
+    "Log retention (days)": "Log retention (days)",
+    "Log cleanup scope": "Log cleanup scope",
+    "Consumption and error logs": "Consumption and error logs",
+    "Consumption logs only": "Consumption logs only",
+    "Error logs only": "Error logs only",
+    "Recent log cleanup results": "Recent log cleanup results",
+    "Failed to load log cleanup results": "Failed to load log cleanup results",
+    "No log cleanup tasks yet": "No log cleanup tasks yet",
+    "Deleted log entries: {{count}}": "Deleted log entries: {{count}}",
+    "Only consumption and error logs can be cleaned": "Only consumption and error logs can be cleaned",
+    "Log cleanup timestamp must be in the past": "Log cleanup timestamp must be in the past",
+    "No log rows were deleted": "No log rows were deleted",
+    "Invalid log cleanup setting": "Invalid log cleanup setting",
+    "Log retention must be between 1 and 36500 days": "Log retention must be between 1 and 36500 days"
   }
 }

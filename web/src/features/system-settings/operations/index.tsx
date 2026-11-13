@@ -31,6 +31,9 @@ const defaultOperationsSettings: OperationsSettings = {
   'maintenance_setting.enabled': false,
   'maintenance_setting.message':
     'The API is temporarily under maintenance. Please try again later.',
+  'log_setting.auto_cleanup_enabled': false,
+  'log_setting.cleanup_retention_days': 30,
+  'log_setting.cleanup_scope': 'consume_error',
   ErrorMessageRewriteEnabled: false,
   ErrorMessageRewriteRules: '[]',
   DefaultCollapseSidebar: false,

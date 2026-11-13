@@ -7804,6 +7804,27 @@
     "Request hot restart": "ホットリスタートを要求",
     "Confirm hot restart": "ホットリスタートを確認",
     "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "代替ワーカーを起動しますか？既存のストリームは終了まで旧ワーカーに残ります。受け付け済みジョブの完了後にのみ、業務バックグラウンド処理の制御権を移します。",
-    "Start replacement": "代替プロセスを起動"
+    "Start replacement": "代替プロセスを起動",
+    "Only consumption and error logs are eligible. Financial records and security audit logs are protected.": "対象は消費ログとエラーログのみです。資金記録とセキュリティ監査ログは保護されます。",
+    "Permanently remove eligible consumption/error logs before {{date}}. Financial and security audit records are protected. This action cannot be undone.": "{{date}} より前の対象の消費ログとエラーログを完全に削除します。資金記録とセキュリティ監査記録は保護されます。この操作は取り消せません。",
+    "Database log automatic cleanup": "データベースログの自動削除",
+    "Succeeded": "成功",
+    "Database log cleanup": "データベースログのクリーンアップ",
+    "Runs daily in bounded batches using system tasks. Disabled by default. Only consumption/error logs can be removed; financial, rebate and security audit records are protected. Disk log files are not affected.": "システムタスクで毎日、件数を制限して分割実行します。初期設定では無効です。削除対象は消費ログとエラーログのみで、資金・還元・セキュリティ監査の記録は保護されます。ディスク上のログファイルには影響しません。",
+    "Automatic database log cleanup": "データベースログの自動クリーンアップ",
+    "Log retention (days)": "ログ保持日数",
+    "Log cleanup scope": "ログクリーンアップの対象範囲",
+    "Consumption and error logs": "消費ログとエラーログ",
+    "Consumption logs only": "消費ログのみ",
+    "Error logs only": "エラーログのみ",
+    "Recent log cleanup results": "最近のログクリーンアップ結果",
+    "Failed to load log cleanup results": "ログクリーンアップ結果の読み込みに失敗しました",
+    "No log cleanup tasks yet": "ログクリーンアップタスクはまだありません",
+    "Deleted log entries: {{count}}": "削除したログ：{{count}} 件",
+    "Only consumption and error logs can be cleaned": "クリーンアップできるのは消費ログとエラーログのみです",
+    "Log cleanup timestamp must be in the past": "ログクリーンアップの基準日時は過去にしてください",
+    "No log rows were deleted": "ログは削除されませんでした",
+    "Invalid log cleanup setting": "ログクリーンアップ設定が無効です",
+    "Log retention must be between 1 and 36500 days": "ログ保持日数は 1～36500 日で指定してください"
   }
 }

@@ -12,16 +12,12 @@ import (
 )
 
 func CreateLogCleanupSystemTask(c *gin.Context) {
-	targetTimestamp, _ := strconv.ParseInt(c.Query("target_timestamp"), 10, 64)
-	if targetTimestamp == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "target timestamp is required",
-		})
+	targetTimestamp, err := strconv.ParseInt(c.Query("target_timestamp"), 10, 64)
+	if err != nil || targetTimestamp <= 0 {
+		common.ApiErrorT(c, "Log cleanup timestamp must be in the past")
 		return
 	}
-
-	task, err := service.StartLogCleanupTask(targetTimestamp)
+	task, err := service.StartScopedLogCleanupTask(targetTimestamp, c.Query("scope"))
 	if err != nil {
 		common.ApiError(c, err)
 		return

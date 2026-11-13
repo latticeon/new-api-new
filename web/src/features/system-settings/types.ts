@@ -101,6 +101,9 @@ export type SystemTask<
 export type LogCleanupTaskPayload = {
   target_timestamp: number
   batch_size: number
+  scope?: 'consume_error' | 'consume' | 'error'
+  automatic?: boolean
+  retention_days?: number
 }
 
 export type LogCleanupTaskState = {
@@ -112,6 +115,9 @@ export type LogCleanupTaskState = {
 
 export type LogCleanupTaskResult = {
   deleted_count: number
+  scope?: 'consume_error' | 'consume' | 'error'
+  automatic?: boolean
+  target_timestamp?: number
 }
 
 export type LogCleanupTask = SystemTask<
@@ -364,6 +370,9 @@ export type OperationsSettings = {
   'general_setting.normalize_response_model_enabled': boolean
   'maintenance_setting.enabled': boolean
   'maintenance_setting.message': string
+  'log_setting.auto_cleanup_enabled': boolean
+  'log_setting.cleanup_retention_days': number
+  'log_setting.cleanup_scope': 'consume_error' | 'consume' | 'error'
   ErrorMessageRewriteEnabled: boolean
   ErrorMessageRewriteRules: string
   DefaultCollapseSidebar: boolean
