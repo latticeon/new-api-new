@@ -12,6 +12,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 
 	"github.com/bytedance/gopkg/util/gopool"
 )
@@ -83,6 +84,11 @@ func StartSystemInstanceReporter() {
 }
 
 func ReportCurrentSystemInstance() error {
+	done, admitted := hotrestart.Background.Begin()
+	if !admitted {
+		return nil
+	}
+	defer done()
 	systemInstanceReportMu.Lock()
 	defer systemInstanceReportMu.Unlock()
 	identity := common.GetNodeIdentity()

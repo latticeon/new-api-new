@@ -7789,6 +7789,21 @@
     "Maintenance message": "Message de maintenance",
     "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Renvoyé aux clients API avec le statut service indisponible. Laisser vide pour utiliser le message par défaut.",
     "Waive charges for zero output tokens": "Exonérer les appels sans jeton de sortie",
-    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Rembourser intégralement l’appel texte si le nombre final de jetons de sortie consigné est nul ou absent. La facturation des images et vidéos reste inchangée."
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Rembourser intégralement l’appel texte si le nombre final de jetons de sortie consigné est nul ou absent. La facturation des images et vidéos reste inchangée.",
+    "Linux graceful hot restart": "Redémarrage à chaud sans interruption sous Linux",
+    "Ready for hot restart": "Prêt pour un redémarrage à chaud",
+    "Hot restart is unavailable": "Redémarrage à chaud indisponible",
+    "Draining existing connections": "Fermeture progressive des connexions existantes",
+    "Replacement startup or connection drain in progress": "Démarrage du remplaçant ou fermeture des connexions en cours",
+    "A ready replacement accepts new connections while the previous worker drains HTTP, SSE and WebSocket connections. Long-lived connections delay the next restart.": "Le remplaçant prêt accepte les nouvelles connexions pendant que l’ancien processus termine ses connexions HTTP, SSE et WebSocket. Les connexions longues retardent le prochain redémarrage.",
+    "Requires Linux, HOT_RESTART_ENABLED=true and a stable SESSION_SECRET. Other platforms are not supported.": "Nécessite Linux, HOT_RESTART_ENABLED=true et un SESSION_SECRET stable. Les autres plateformes ne sont pas prises en charge.",
+    "Worker PID": "PID du processus de travail",
+    "Background leadership": "Responsabilité des tâches de fond",
+    "Waiting for previous worker": "En attente de l’ancien processus",
+    "Startup failure or readiness timeout retains the previous service. Forced termination, host failure, proxy timeouts and incompatible database upgrades are not covered.": "En cas d’échec de démarrage ou de délai de disponibilité dépassé, le service précédent est conservé. Les arrêts forcés, pannes d’hôte, délais de proxy et mises à niveau incompatibles de base de données ne sont pas couverts.",
+    "Request hot restart": "Demander un redémarrage à chaud",
+    "Confirm hot restart": "Confirmer le redémarrage à chaud",
+    "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "Démarrer un processus remplaçant ? Les flux existants restent sur l’ancien jusqu’à leur fin. La responsabilité des tâches métier de fond n’est transférée qu’après la fin des tâches admises.",
+    "Start replacement": "Démarrer le remplaçant"
   }
 }

@@ -7789,6 +7789,21 @@
     "Maintenance message": "Thông báo bảo trì",
     "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Trả về cho máy khách API với trạng thái dịch vụ không khả dụng. Để trống để dùng thông báo mặc định.",
     "Waive charges for zero output tokens": "Miễn phí khi không có token đầu ra",
-    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Hoàn toàn bộ phí gọi văn bản nếu số token đầu ra cuối cùng trong nhật ký bằng không hoặc bị thiếu. Không ảnh hưởng đến phí hình ảnh và video."
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Hoàn toàn bộ phí gọi văn bản nếu số token đầu ra cuối cùng trong nhật ký bằng không hoặc bị thiếu. Không ảnh hưởng đến phí hình ảnh và video.",
+    "Linux graceful hot restart": "Khởi động lại nóng an toàn trên Linux",
+    "Ready for hot restart": "Sẵn sàng khởi động lại nóng",
+    "Hot restart is unavailable": "Không thể khởi động lại nóng",
+    "Draining existing connections": "Đang chờ các kết nối hiện tại kết thúc",
+    "Replacement startup or connection drain in progress": "Đang khởi chạy tiến trình thay thế hoặc chờ kết nối kết thúc",
+    "A ready replacement accepts new connections while the previous worker drains HTTP, SSE and WebSocket connections. Long-lived connections delay the next restart.": "Tiến trình thay thế sẵn sàng sẽ nhận kết nối mới trong khi tiến trình cũ chờ các kết nối HTTP, SSE và WebSocket kết thúc. Kết nối kéo dài sẽ làm chậm lần khởi động lại tiếp theo.",
+    "Requires Linux, HOT_RESTART_ENABLED=true and a stable SESSION_SECRET. Other platforms are not supported.": "Yêu cầu Linux, HOT_RESTART_ENABLED=true và SESSION_SECRET không đổi. Không hỗ trợ nền tảng khác.",
+    "Worker PID": "PID tiến trình xử lý",
+    "Background leadership": "Quyền điều phối tác vụ nền",
+    "Waiting for previous worker": "Đang chờ tiến trình xử lý cũ",
+    "Startup failure or readiness timeout retains the previous service. Forced termination, host failure, proxy timeouts and incompatible database upgrades are not covered.": "Giữ dịch vụ cũ nếu khởi chạy thất bại hoặc quá thời gian sẵn sàng. Không bảo vệ khỏi việc buộc dừng, lỗi máy chủ, hết thời gian chờ proxy hay nâng cấp cơ sở dữ liệu không tương thích.",
+    "Request hot restart": "Yêu cầu khởi động lại nóng",
+    "Confirm hot restart": "Xác nhận khởi động lại nóng",
+    "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "Khởi chạy tiến trình xử lý thay thế? Các luồng hiện tại vẫn ở tiến trình cũ đến khi kết thúc. Quyền điều phối tác vụ nền nghiệp vụ chỉ chuyển giao sau khi các công việc đã nhận hoàn tất.",
+    "Start replacement": "Khởi chạy tiến trình thay thế"
   }
 }

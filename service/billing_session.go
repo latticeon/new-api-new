@@ -12,6 +12,7 @@ import (
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -109,7 +110,7 @@ func (s *BillingSession) Refund(c *gin.Context) {
 	subscriptionId := s.relayInfo.SubscriptionId
 	funding := s.funding
 
-	gopool.Go(func() {
+	refund := func() {
 		// 1) 退还资金来源
 		if err := funding.Refund(); err != nil {
 			common.SysLog(common.LogText("error refunding billing source: %s", err.Error()))
@@ -125,6 +126,16 @@ func (s *BillingSession) Refund(c *gin.Context) {
 				common.SysLog(common.LogText("error refunding token quota: %s", err.Error()))
 			}
 		}
+	}
+	done, admitted := hotrestart.Deferred.Begin()
+	if !admitted {
+		// Never discard money movement after the asynchronous admission fence.
+		refund()
+		return
+	}
+	gopool.Go(func() {
+		defer done()
+		refund()
 	})
 }
 

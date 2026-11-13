@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 
 	"github.com/bytedance/gopkg/util/gopool"
 )
@@ -44,6 +45,11 @@ func StartSubscriptionQuotaResetTask() {
 }
 
 func runSubscriptionQuotaResetOnce() {
+	done, admitted := hotrestart.Background.Begin()
+	if !admitted {
+		return
+	}
+	defer done()
 	if !subscriptionResetRunning.CompareAndSwap(false, true) {
 		return
 	}

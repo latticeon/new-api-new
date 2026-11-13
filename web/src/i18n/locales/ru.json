@@ -7789,6 +7789,21 @@
     "Maintenance message": "Сообщение об обслуживании",
     "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Возвращается клиентам API со статусом недоступности сервиса. Оставьте пустым для сообщения по умолчанию.",
     "Waive charges for zero output tokens": "Не взимать плату при нулевом выводе токенов",
-    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Полностью возвращать оплату текстового вызова, если итоговое число выходных токенов в журнале равно нулю или отсутствует. Тарификация изображений и видео не меняется."
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Полностью возвращать оплату текстового вызова, если итоговое число выходных токенов в журнале равно нулю или отсутствует. Тарификация изображений и видео не меняется.",
+    "Linux graceful hot restart": "Плавный горячий перезапуск в Linux",
+    "Ready for hot restart": "Готово к горячему перезапуску",
+    "Hot restart is unavailable": "Горячий перезапуск недоступен",
+    "Draining existing connections": "Ожидание завершения текущих соединений",
+    "Replacement startup or connection drain in progress": "Запуск нового процесса или завершение соединений",
+    "A ready replacement accepts new connections while the previous worker drains HTTP, SSE and WebSocket connections. Long-lived connections delay the next restart.": "Готовый новый процесс принимает новые соединения, пока прежний завершает соединения HTTP, SSE и WebSocket. Длительные соединения откладывают следующий перезапуск.",
+    "Requires Linux, HOT_RESTART_ENABLED=true and a stable SESSION_SECRET. Other platforms are not supported.": "Требуются Linux, HOT_RESTART_ENABLED=true и неизменный SESSION_SECRET. Другие платформы не поддерживаются.",
+    "Worker PID": "PID рабочего процесса",
+    "Background leadership": "Управление фоновыми задачами",
+    "Waiting for previous worker": "Ожидание прежнего рабочего процесса",
+    "Startup failure or readiness timeout retains the previous service. Forced termination, host failure, proxy timeouts and incompatible database upgrades are not covered.": "При сбое запуска или тайм-ауте готовности прежний сервис сохраняется. Принудительное завершение, сбои хоста, тайм-ауты прокси и несовместимые обновления базы данных не покрываются.",
+    "Request hot restart": "Запросить горячий перезапуск",
+    "Confirm hot restart": "Подтвердить горячий перезапуск",
+    "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "Запустить новый рабочий процесс? Текущие потоки останутся в прежнем до завершения. Управление фоновыми бизнес-задачами передаётся только после завершения принятых заданий.",
+    "Start replacement": "Запустить новый процесс"
   }
 }

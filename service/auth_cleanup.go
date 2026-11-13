@@ -5,6 +5,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 )
 
 const authArtifactCleanupInterval = time.Hour
@@ -27,6 +28,11 @@ func StartAuthArtifactCleanup() {
 }
 
 func cleanupAuthArtifacts() {
+	done, admitted := hotrestart.Background.Begin()
+	if !admitted {
+		return
+	}
+	defer done()
 	now := time.Now()
 	count, err := model.CountUserSessionsCreatedSince(0, now.Add(-time.Hour).Unix())
 	if err != nil {

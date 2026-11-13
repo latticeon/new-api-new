@@ -10,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 
 	"github.com/bytedance/gopkg/util/gopool"
 )
@@ -136,6 +137,11 @@ func StartSystemTaskRunner() {
 			var lastScheduler time.Time
 			var lastStaleLockCleanup time.Time
 			runPass := func() {
+				done, admitted := hotrestart.Background.Begin()
+				if !admitted {
+					return
+				}
+				defer done()
 				// The scheduler/stale-lock pass is throttled independently of the
 				// claim pass: wakeups (e.g. a manual log cleanup) should claim
 				// immediately without re-running the scheduler every time.
@@ -235,21 +241,29 @@ func runSystemTaskClaimPass(runnerID string) {
 		return
 	}
 	for _, handler := range handlers {
+		done, admitted := hotrestart.Background.Begin()
+		if !admitted {
+			return
+		}
 		task := pendingTasks[handler.Type()]
 		if task == nil {
+			done()
 			continue
 		}
 		claimedTask, claimed, err := model.ClaimSystemTask(task.ID, handler.Type(), runnerID, systemTaskLockUntil())
 		if err != nil {
 			logger.LogWarn(context.Background(), common.LogText("system task claim failed: %v", err))
+			done()
 			continue
 		}
 		if !claimed {
+			done()
 			continue
 		}
 		dispatchHandler := handler
 		dispatchTask := claimedTask
 		gopool.Go(func() {
+			defer done()
 			runWithLeaseHeartbeat(dispatchTask, runnerID, func(ctx context.Context) {
 				dispatchHandler.Run(ctx, dispatchTask, runnerID)
 			})
@@ -317,8 +331,10 @@ func runWithLeaseHeartbeat(task *model.SystemTask, runnerID string, fn func(ctx 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	done := make(chan struct{})
+	heartbeatStopped := make(chan struct{})
 
 	go func() {
+		defer close(heartbeatStopped)
 		for {
 			select {
 			case <-done:
@@ -334,6 +350,7 @@ func runWithLeaseHeartbeat(task *model.SystemTask, runnerID string, fn func(ctx 
 
 	fn(ctx)
 	close(done)
+	<-heartbeatStopped // Do not release background ownership with a DB renewal still in flight.
 }
 
 func runLogCleanupTask(ctx context.Context, task *model.SystemTask, runnerID string) {

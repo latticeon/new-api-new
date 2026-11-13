@@ -182,6 +182,8 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"POST /api/performance/gc":                     accessTokenScopeRule("ops:write"),
 	"GET /api/performance/logs":                    accessTokenScopeRule("ops:read"),
 	"DELETE /api/performance/logs":                 accessTokenScopeRule("ops:write"),
+	"GET /api/hot_restart/status": accessTokenScopeRule("ops:read"),
+	"POST /api/hot_restart/": accessTokenSessionRule,
 	"POST /api/system-task/log-cleanup":            accessTokenScopeRule("ops:write"),
 	"GET /api/system-task/list":                    accessTokenScopeRule("ops:read"),
 	"DELETE /api/system-task/history":              accessTokenScopeRule("ops:write"),

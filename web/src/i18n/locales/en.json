@@ -7789,6 +7789,21 @@
     "Maintenance message": "Maintenance message",
     "Returned to API clients with service unavailable status. Leave empty to use the default message.": "Returned to API clients with service unavailable status. Leave empty to use the default message.",
     "Waive charges for zero output tokens": "Waive charges for zero output tokens",
-    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected."
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.",
+    "Linux graceful hot restart": "Linux graceful hot restart",
+    "Ready for hot restart": "Ready for hot restart",
+    "Hot restart is unavailable": "Hot restart is unavailable",
+    "Draining existing connections": "Draining existing connections",
+    "Replacement startup or connection drain in progress": "Replacement startup or connection drain in progress",
+    "A ready replacement accepts new connections while the previous worker drains HTTP, SSE and WebSocket connections. Long-lived connections delay the next restart.": "A ready replacement accepts new connections while the previous worker drains HTTP, SSE and WebSocket connections. Long-lived connections delay the next restart.",
+    "Requires Linux, HOT_RESTART_ENABLED=true and a stable SESSION_SECRET. Other platforms are not supported.": "Requires Linux, HOT_RESTART_ENABLED=true and a stable SESSION_SECRET. Other platforms are not supported.",
+    "Worker PID": "Worker PID",
+    "Background leadership": "Background leadership",
+    "Waiting for previous worker": "Waiting for previous worker",
+    "Startup failure or readiness timeout retains the previous service. Forced termination, host failure, proxy timeouts and incompatible database upgrades are not covered.": "Startup failure or readiness timeout retains the previous service. Forced termination, host failure, proxy timeouts and incompatible database upgrades are not covered.",
+    "Request hot restart": "Request hot restart",
+    "Confirm hot restart": "Confirm hot restart",
+    "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.",
+    "Start replacement": "Start replacement"
   }
 }

@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { HotRestartPanel } from '@/features/hot-restart/HotRestartPanel'
 
 import { SystemBehaviorSection } from '../general/system-behavior-section'
 import { EmailSettingsSection } from '../integrations/email-settings-section'
@@ -30,6 +31,11 @@ import { APIMaintenanceSection } from './api-maintenance-section'
 import { ErrorRewriteSection } from './error-rewrite-section'
 
 const OPERATIONS_SECTIONS = [
+  {
+    id: 'hot-restart',
+    titleKey: 'Linux graceful hot restart',
+    build: () => <HotRestartPanel />,
+  },
   {
     id: 'api-maintenance',
     titleKey: 'API maintenance',

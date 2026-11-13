@@ -4,15 +4,12 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"errors"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -23,6 +20,7 @@ import (
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 	"github.com/QuantumNous/new-api/pkg/jsplugin"
 	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
 	"github.com/QuantumNous/new-api/pkg/wsmanager"
@@ -52,6 +50,8 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "plugin" {
 		os.Exit(jsplugin.RunCLI(os.Args[2:], os.Stdout, os.Stderr))
 	}
+	runSupervisorIfEnabled()
+	hotrestart.PrepareWorker()
 	startTime := time.Now()
 	kitutil.SetLogging(common.SysLog, func(message string) {
 		logger.LogError(nil, message)
@@ -166,6 +166,7 @@ func main() {
 
 	// Subscription quota reset task (daily/weekly/monthly/custom)
 	service.StartSubscriptionQuotaResetTask()
+	service.StartAuthArtifactCleanup()
 
 	// Report this process as a system instance so the System Info page can show
 	// all currently alive nodes in multi-instance deployments.
@@ -237,38 +238,9 @@ func main() {
 		port = strconv.Itoa(*common.Port)
 	}
 
-	srv := &http.Server{
-		Addr:    net.JoinHostPort(host, port),
-		Handler: server,
+	if err := serveHTTP(server, net.JoinHostPort(host, port), startTime, host, port); err != nil {
+		common.SysError(common.LogText("HTTP server stopped: %v", err))
 	}
-
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			common.FatalLog(common.LogText("failed to start HTTP server: %s", err.Error()))
-		}
-	}()
-
-	time.Sleep(100 * time.Millisecond)
-
-	common.LogStartupSuccess(startTime, host, port)
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-quit
-	common.SysLog(common.LogText("received signal: %v, shutting down...", sig))
-
-	// SSE streams may run for minutes; give them time to finish before forced exit
-	shutdownTimeout := time.Duration(common.GetEnvOrDefault("SHUTDOWN_TIMEOUT_SECONDS", 120)) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		common.SysError(common.LogText("server forced to shutdown: %v", err))
-	}
-	// 内存中的看板数据保存入库，避免重启丢失未落库数据 (issue #5679)
-	if common.DataExportEnabled {
-		model.SaveQuotaDataCache()
-	}
-	common.SysLog(common.LogText("server exited"))
 }
 
 func InjectUmamiAnalytics() {
@@ -409,8 +381,6 @@ func InitResources() error {
 		// The node sync loads them again on its first tick.
 		service.SyncTopicLoadFailed(model.SyncTopicOAuthProviders, err)
 	}
-
-	service.StartAuthArtifactCleanup()
 
 	return nil
 }

@@ -175,6 +175,10 @@ func SetApiRouter(router *gin.Engine) {
 			}
 		}
 
+		hotRestartRoute := apiRouter.Group("/hot_restart", middleware.RootAuth())
+		hotRestartRoute.GET("/status", controller.GetHotRestartStatus)
+		hotRestartRoute.POST("/", middleware.CriticalRateLimit(), controller.HotRestart)
+
 		// Subscription billing (plans, purchase, admin management)
 		subscriptionRoute := apiRouter.Group("/subscription")
 		subscriptionRoute.Use(middleware.UserAuth())

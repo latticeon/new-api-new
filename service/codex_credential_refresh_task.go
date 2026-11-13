@@ -11,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 
 	"github.com/bytedance/gopkg/util/gopool"
 )
@@ -52,6 +53,11 @@ func StartCodexCredentialAutoRefreshTask() {
 }
 
 func runCodexCredentialAutoRefreshOnce() {
+	done, admitted := hotrestart.Background.Begin()
+	if !admitted {
+		return
+	}
+	defer done()
 	if !codexCredentialRefreshRunning.CompareAndSwap(false, true) {
 		return
 	}

@@ -7789,6 +7789,21 @@
     "Maintenance message": "維護提示",
     "Returned to API clients with service unavailable status. Leave empty to use the default message.": "以服務無法使用狀態回傳給 API 用戶端。留空以使用預設提示。",
     "Waive charges for zero output tokens": "零輸出權杖免收費",
-    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "最終日誌中的輸出權杖數為零或缺失時，退還整次文字呼叫費用。不影響圖片和影片計費。"
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "最終日誌中的輸出權杖數為零或缺失時，退還整次文字呼叫費用。不影響圖片和影片計費。",
+    "Linux graceful hot restart": "Linux 平順熱重啟",
+    "Ready for hot restart": "可進行熱重啟",
+    "Hot restart is unavailable": "熱重啟無法使用",
+    "Draining existing connections": "正在等待現有連線結束",
+    "Replacement startup or connection drain in progress": "替代程序啟動或連線排空中",
+    "A ready replacement accepts new connections while the previous worker drains HTTP, SSE and WebSocket connections. Long-lived connections delay the next restart.": "替代工作程序就緒後接收新連線，舊工作程序等待 HTTP、SSE 和 WebSocket 連線結束。長連線會延遲下一次重啟。",
+    "Requires Linux, HOT_RESTART_ENABLED=true and a stable SESSION_SECRET. Other platforms are not supported.": "需要 Linux、HOT_RESTART_ENABLED=true 以及保持不變的 SESSION_SECRET。不支援其他平台。",
+    "Worker PID": "工作程序 PID",
+    "Background leadership": "背景工作主控權",
+    "Waiting for previous worker": "等待舊工作程序",
+    "Startup failure or readiness timeout retains the previous service. Forced termination, host failure, proxy timeouts and incompatible database upgrades are not covered.": "啟動失敗或就緒逾時會保留原服務。不涵蓋強制終止、主機故障、代理逾時及不相容的資料庫升級。",
+    "Request hot restart": "請求熱重啟",
+    "Confirm hot restart": "確認熱重啟",
+    "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "啟動替代工作程序？現有串流將保留在舊工作程序直到結束。已接納的工作完成後才會移交業務背景工作的主控權。",
+    "Start replacement": "啟動替代程序"
   }
 }

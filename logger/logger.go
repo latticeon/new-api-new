@@ -73,6 +73,22 @@ func SetupLogger() {
 	}
 }
 
+// CloseLogger releases the current file after request and background logging drain.
+func CloseLogger() {
+	setupLogLock.Lock()
+	defer setupLogLock.Unlock()
+	common.LogWriterMu.Lock()
+	defer common.LogWriterMu.Unlock()
+	currentLogPathMu.Lock()
+	defer currentLogPathMu.Unlock()
+	gin.DefaultWriter, gin.DefaultErrorWriter = os.Stdout, os.Stderr
+	if currentLogFile != nil {
+		_ = currentLogFile.Close()
+		currentLogFile = nil
+	}
+	currentLogPath = ""
+}
+
 func LogInfo(ctx context.Context, msg string) {
 	logHelper(ctx, loggerINFO, msg)
 }

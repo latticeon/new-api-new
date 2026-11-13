@@ -7789,6 +7789,21 @@
     "Maintenance message": "メンテナンスメッセージ",
     "Returned to API clients with service unavailable status. Leave empty to use the default message.": "サービス利用不可のステータスとともに API クライアントに返されます。空欄の場合は既定のメッセージを使用します。",
     "Waive charges for zero output tokens": "出力トークンがゼロの場合は課金しない",
-    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "最終ログの出力トークン数がゼロまたは未記録の場合、テキスト呼び出しの料金を全額返金します。画像と動画の課金には影響しません。"
+    "Refund the entire text call when the final logged output token count is zero or missing. Image and video billing are unaffected.": "最終ログの出力トークン数がゼロまたは未記録の場合、テキスト呼び出しの料金を全額返金します。画像と動画の課金には影響しません。",
+    "Linux graceful hot restart": "Linux のグレースフルホットリスタート",
+    "Ready for hot restart": "ホットリスタート可能",
+    "Hot restart is unavailable": "ホットリスタートは利用できません",
+    "Draining existing connections": "既存接続の終了を待機中",
+    "Replacement startup or connection drain in progress": "代替プロセスの起動または接続の終了処理中",
+    "A ready replacement accepts new connections while the previous worker drains HTTP, SSE and WebSocket connections. Long-lived connections delay the next restart.": "準備が整った代替ワーカーが新規接続を受け付け、旧ワーカーは HTTP、SSE、WebSocket 接続の終了を待ちます。長時間の接続は次の再起動を遅らせます。",
+    "Requires Linux, HOT_RESTART_ENABLED=true and a stable SESSION_SECRET. Other platforms are not supported.": "Linux、HOT_RESTART_ENABLED=true、変更されない SESSION_SECRET が必要です。他のプラットフォームには対応していません。",
+    "Worker PID": "ワーカー PID",
+    "Background leadership": "バックグラウンド処理の制御権",
+    "Waiting for previous worker": "旧ワーカーを待機中",
+    "Startup failure or readiness timeout retains the previous service. Forced termination, host failure, proxy timeouts and incompatible database upgrades are not covered.": "起動失敗や準備完了のタイムアウト時は旧サービスを維持します。強制終了、ホスト障害、プロキシのタイムアウト、互換性のないデータベース更新は対象外です。",
+    "Request hot restart": "ホットリスタートを要求",
+    "Confirm hot restart": "ホットリスタートを確認",
+    "Start a replacement worker? Existing streams stay on the previous worker until they finish. Business background ownership transfers only after admitted jobs finish.": "代替ワーカーを起動しますか？既存のストリームは終了まで旧ワーカーに残ります。受け付け済みジョブの完了後にのみ、業務バックグラウンド処理の制御権を移します。",
+    "Start replacement": "代替プロセスを起動"
   }
 }

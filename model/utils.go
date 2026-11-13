@@ -23,6 +23,7 @@ const (
 
 var batchUpdateStores []map[int]int
 var batchUpdateLocks []sync.Mutex
+var batchFlushMu sync.Mutex
 
 func init() {
 	for range BatchUpdateTypeCount {
@@ -62,6 +63,8 @@ func addNewRecord(type_ int, id int, value int) {
 }
 
 func batchUpdate() {
+	batchFlushMu.Lock()
+	defer batchFlushMu.Unlock()
 	// check if there's any data to update
 	hasData := false
 	for i := range BatchUpdateTypeCount {
@@ -137,3 +140,7 @@ func RecordExist(err error) (bool, error) {
 func shouldUpdateRedis(fromDB bool, err error) bool {
 	return common.RedisEnabled && fromDB && err == nil
 }
+
+// FlushBatchUpdates persists this worker's own pending deltas after requests and
+// request-owned asynchronous refunds have drained. Other workers own other maps.
+func FlushBatchUpdates() { batchUpdate() }

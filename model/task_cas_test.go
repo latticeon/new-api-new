@@ -3,7 +3,9 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -13,7 +15,10 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 func TestMain(m *testing.M) {
@@ -347,4 +352,115 @@ func TestUpdateWithStatus_PersistsPluginStateAndPollFailures(t *testing.T) {
 	assert.EqualValues(t, TaskStatusInProgress, reloaded.Status)
 	assert.JSONEq(t, `{"req_key":"new"}`, string(reloaded.PrivateData.PluginState))
 	assert.Equal(t, 4, reloaded.PrivateData.PollFailures)
+}
+
+// Final shutdown flush must join an in-flight periodic flush and persist each
+// worker-local delta once, including deltas admitted after the first snapshot.
+func TestHotRestartFlushBatchUpdatesDatabaseMatrix(t *testing.T) {
+	for _, dialect := range []string{"sqlite", "mysql", "postgres"} {
+		t.Run(dialect, func(t *testing.T) {
+			var driver gorm.Dialector
+			kind := common.DatabaseTypeSQLite
+			switch dialect {
+			case "sqlite":
+				driver = sqlite.Open(filepath.Join(t.TempDir(), "flush.db"))
+			case "mysql":
+				dsn := os.Getenv("TEST_MYSQL_DSN")
+				if dsn == "" {
+					t.Skip("TEST_MYSQL_DSN not configured")
+				}
+				driver, kind = mysql.Open(dsn), common.DatabaseTypeMySQL
+			case "postgres":
+				dsn := os.Getenv("TEST_POSTGRES_DSN")
+				if dsn == "" {
+					t.Skip("TEST_POSTGRES_DSN not configured")
+				}
+				driver, kind = postgres.Open(dsn), common.DatabaseTypePostgreSQL
+			}
+			db, err := gorm.Open(driver, &gorm.Config{NamingStrategy: schema.NamingStrategy{
+				TablePrefix: fmt.Sprintf("hotrestart_flush_%d_", time.Now().UnixNano()),
+			}})
+			require.NoError(t, err)
+			pool, err := db.DB()
+			require.NoError(t, err)
+			pool.SetMaxOpenConns(4)
+			previousDB, previousBatch, previousRedis := DB, common.BatchUpdateEnabled, common.RedisEnabled
+			previousMain, previousLog := common.MainDatabaseType(), common.LogDatabaseType()
+			DB, common.BatchUpdateEnabled, common.RedisEnabled = db, true, false
+			common.SetDatabaseTypes(kind, previousLog)
+			t.Cleanup(func() {
+				DB, common.BatchUpdateEnabled, common.RedisEnabled = previousDB, previousBatch, previousRedis
+				common.SetDatabaseTypes(previousMain, previousLog)
+				require.NoError(t, db.Migrator().DropTable(&Token{}, &Channel{}, &User{}))
+				require.NoError(t, pool.Close())
+			})
+			require.NoError(t, db.AutoMigrate(&User{}, &Token{}, &Channel{}))
+			query := "SELECT version()"
+			if dialect == "sqlite" {
+				query = "SELECT sqlite_version()"
+			}
+			var version string
+			require.NoError(t, db.Raw(query).Scan(&version).Error)
+			t.Logf("database version: %s", version)
+			user := User{Username: "flush", Quota: 1000, UsedQuota: 200, RequestCount: 2}
+			require.NoError(t, db.Create(&user).Error)
+			token := Token{UserId: user.Id, Key: "flush", RemainQuota: 500, UsedQuota: 200}
+			require.NoError(t, db.Create(&token).Error)
+			channel := Channel{UsedQuota: 200}
+			require.NoError(t, db.Create(&channel).Error)
+
+			entered, release := make(chan struct{}), make(chan struct{})
+			var pauseOnce, releaseOnce sync.Once
+			// Pause after the first batch snapshot but before any DB delta.
+			require.NoError(t, db.Callback().Update().Before("gorm:update").Register("hotrestart_pause", func(tx *gorm.DB) {
+				if _, ok := tx.Statement.Model.(*Token); ok {
+					pauseOnce.Do(func() { close(entered); <-release })
+				}
+			}))
+			defer releaseOnce.Do(func() { close(release) })
+			addNewRecord(BatchUpdateTypeUserQuota, user.Id, -40)
+			require.NoError(t, DecreaseTokenQuota(token.Id, token.Key, 40))
+			UpdateUserUsedQuotaAndRequestCount(user.Id, 40)
+			UpdateChannelUsedQuota(channel.Id, 40)
+			periodicDone := make(chan struct{})
+			go func() { batchUpdate(); close(periodicDone) }()
+			select {
+			case <-entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("periodic flush did not reach database")
+			}
+			addNewRecord(BatchUpdateTypeUserQuota, user.Id, 15)
+			require.NoError(t, IncreaseTokenQuota(token.Id, token.Key, 15))
+			UpdateUserUsedQuota(user.Id, -15)
+			UpdateChannelUsedQuota(channel.Id, -15)
+			finalDone, finalStarted := make(chan struct{}), make(chan struct{})
+			go func() { close(finalStarted); FlushBatchUpdates(); close(finalDone) }()
+			<-finalStarted
+			select {
+			case <-finalDone:
+				t.Error("final flush returned while the periodic snapshot was still blocked")
+			case <-time.After(100 * time.Millisecond):
+			}
+			releaseOnce.Do(func() { close(release) })
+			for _, done := range []chan struct{}{periodicDone, finalDone} {
+				select {
+				case <-done:
+				case <-time.After(5 * time.Second):
+					t.Fatal("concurrent flush did not finish")
+				}
+			}
+			// Repeated final flush must be a no-op, not replay either snapshot.
+			FlushBatchUpdates()
+			require.NoError(t, db.First(&user, user.Id).Error)
+			assert.Equal(t, 975, user.Quota)
+			assert.Equal(t, 225, user.UsedQuota)
+			assert.Equal(t, 3, user.RequestCount)
+			require.NoError(t, db.First(&token, token.Id).Error)
+			assert.Equal(t, 475, token.RemainQuota)
+			assert.Equal(t, 225, token.UsedQuota)
+			require.NoError(t, db.First(&channel, channel.Id).Error)
+			assert.EqualValues(t, 225, channel.UsedQuota)
+			t.Log("periodic + concurrent final + repeated final flush: wallet=975 token=475 usage=225 requests=3")
+		})
+	}
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 	"github.com/QuantumNous/new-api/pkg/jsplugin"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -481,6 +482,11 @@ func StartPluginCredentialRefreshTask() {
 
 // RefreshExpiringPluginCredentials runs one background refresh scan.
 func RefreshExpiringPluginCredentials(now time.Time) {
+	done, admitted := hotrestart.Background.Begin()
+	if !admitted {
+		return
+	}
+	defer done()
 	if !pluginCredentialScanRunning.CompareAndSwap(false, true) {
 		return
 	}

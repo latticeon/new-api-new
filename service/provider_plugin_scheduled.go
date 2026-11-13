@@ -16,6 +16,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/hotrestart"
 	"github.com/QuantumNous/new-api/pkg/jsplugin"
 )
 
@@ -68,6 +69,9 @@ func ScanScheduledPlugins(ctx context.Context) error {
 // scan examines a plugin-channel snapshot. Workers exist
 // only while a hook is running; a busy key waits for the next scan.
 func (s *pluginScheduler) scan(channels []*model.Channel, now time.Time) {
+	if !hotrestart.Background.Enabled() {
+		return
+	}
 	if !common.IsMasterNode {
 		return
 	}
@@ -120,11 +124,17 @@ func (s *pluginScheduler) scan(channels []*model.Channel, now time.Time) {
 			}
 			select {
 			case s.slots <- struct{}{}:
+				done, admitted := hotrestart.Background.Begin()
+				if !admitted {
+					<-s.slots
+					return
+				}
 				entry.running = true
 				if reason == "disabled" {
 					entry.disabledPending, entry.lastDisabled = false, now
 				}
 				s.workers.Go(func() {
+					defer done()
 					s.run(channel, plugin, key, entry, line, reason)
 				})
 			default:
@@ -145,6 +155,10 @@ func (s *pluginScheduler) scan(channels []*model.Channel, now time.Time) {
 // Checking the export table precedes all scheduler allocation and JS work.
 func (s *pluginScheduler) disabled(channel *model.Channel, usingKey string, now time.Time) {
 	if !common.IsMasterNode {
+		// Hot restart ownership applies to event-triggered maintenance too.
+		return
+	}
+	if !hotrestart.Background.Enabled() {
 		return
 	}
 	plugin, ok := PluginOfChannel(channel)
@@ -181,11 +195,16 @@ func (s *pluginScheduler) disabled(channel *model.Channel, usingKey string, now 
 	if entry.running || (!entry.lastDisabled.IsZero() && now.Sub(entry.lastDisabled) < time.Minute) {
 		return
 	}
+	done, admitted := hotrestart.Background.Begin()
+	if !admitted {
+		return
+	}
 	entry.running, entry.lastDisabled, entry.disabledPending = true, now, false
 	if s.slots == nil {
 		s.slots = make(chan struct{}, 4)
 	}
 	s.workers.Go(func() {
+		defer done()
 		// A disable returns immediately, including when all four slots are busy.
 		s.slots <- struct{}{}
 		s.run(channel, plugin, key, entry, line, "disabled")
