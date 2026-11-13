@@ -100,12 +100,14 @@ func AddRedemption(c *gin.Context) {
 	for i := 0; i < redemption.Count; i++ {
 		key := common.GetUUID()
 		cleanRedemption := model.Redemption{
-			UserId:      c.GetInt("id"),
-			Name:        redemption.Name,
-			Key:         key,
-			CreatedTime: common.GetTimestamp(),
-			Quota:       redemption.Quota,
-			ExpiredTime: redemption.ExpiredTime,
+			UserId:        c.GetInt("id"),
+			Name:          redemption.Name,
+			Key:           key,
+			CreatedTime:   common.GetTimestamp(),
+			Quota:         redemption.Quota,
+			ExpiredTime:   redemption.ExpiredTime,
+			SalePrice:     redemption.SalePrice,
+			RebateEnabled: redemption.RebateEnabled,
 		}
 		err = cleanRedemption.Insert()
 		if err != nil {
@@ -172,6 +174,8 @@ func UpdateRedemption(c *gin.Context) {
 		cleanRedemption.Name = redemption.Name
 		cleanRedemption.Quota = redemption.Quota
 		cleanRedemption.ExpiredTime = redemption.ExpiredTime
+		cleanRedemption.SalePrice = redemption.SalePrice
+		cleanRedemption.RebateEnabled = redemption.RebateEnabled
 	}
 	if statusOnly != "" {
 		cleanRedemption.Status = redemption.Status

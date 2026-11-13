@@ -237,6 +237,7 @@ type SubscriptionOrder struct {
 	CompleteTime    int64  `json:"complete_time"`
 
 	ProviderPayload string `json:"provider_payload" gorm:"type:text"`
+	PaymentSnapshot string `json:"payment_snapshot" gorm:"type:text"`
 }
 
 func (o *SubscriptionOrder) Insert() error {
@@ -585,7 +586,7 @@ func refreshSubscriptionUserGroupCache(userId int, operation string) {
 // Complete a subscription order (idempotent). Creates a UserSubscription snapshot from the plan.
 // expectedPaymentProvider guards against cross-gateway callback attacks (empty skips the check).
 // actualPaymentMethod updates the order's PaymentMethod to reflect the real payment type used (empty skips update).
-func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedPaymentProvider string, actualPaymentMethod string) error {
+func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedPaymentProvider string, actualPaymentMethod string, receipt ...*PaymentReceipt) error {
 	if tradeNo == "" {
 		return errors.New("tradeNo is empty")
 	}
@@ -643,6 +644,9 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if actualPaymentMethod != "" && order.PaymentMethod != actualPaymentMethod {
 			order.PaymentMethod = actualPaymentMethod
 		}
+		if len(receipt) > 0 {
+			order.PaymentSnapshot = receiptJSON(receipt[0])
+		}
 		if err := tx.Save(&order).Error; err != nil {
 			return err
 		}
@@ -653,7 +657,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if order.PaymentProvider == PaymentProviderBalance {
 			return nil
 		}
-		return RecordArrivalTx(tx, ArrivalInput{Source: "subscription", Reference: order.TradeNo, UserId: order.UserId})
+		return RecordArrivalTx(tx, ArrivalInput{Source: "subscription", Reference: order.TradeNo, UserId: order.UserId, Payment: parseReceipt(order.PaymentSnapshot), Participate: true})
 	})
 	if err != nil {
 		return err

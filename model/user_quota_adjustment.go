@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"math"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/shopspring/decimal"
@@ -22,7 +23,13 @@ type UserQuotaAdjustment struct {
 	After    int
 }
 
-func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuotaAdjustment, error) {
+type AdminArrivalOptions struct {
+	RebateEnabled  bool
+	ReceivedAmount *float64
+	Reference      string
+}
+
+func AdjustUserQuota(userID, operatorRole int, mode string, value int, options ...AdminArrivalOptions) (*UserQuotaAdjustment, error) {
 	if userID <= 0 || (mode != "add" && mode != "subtract" && mode != "override") {
 		return nil, ErrInvalidUserQuotaAdjustment
 	}
@@ -33,7 +40,19 @@ func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuo
 		return nil, ErrWalletQuotaLimitExceeded
 	}
 
-	reference := common.GetUUID()
+	var opt AdminArrivalOptions
+	if len(options) > 0 {
+		opt = options[0]
+	}
+	if opt.RebateEnabled && (opt.ReceivedAmount == nil || opt.Reference == "" || len(opt.Reference) > 191) {
+		return nil, ErrInvalidUserQuotaAdjustment
+	}
+	if opt.ReceivedAmount != nil && (math.IsNaN(*opt.ReceivedAmount) || math.IsInf(*opt.ReceivedAmount, 0) || *opt.ReceivedAmount < 0 || *opt.ReceivedAmount > float64(common.MaxWalletQuota)) {
+		return nil, ErrInvalidUserQuotaAdjustment
+	}
+	if opt.Reference == "" {
+		opt.Reference = common.GetUUID()
+	}
 	var adjustment UserQuotaAdjustment
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var user User
@@ -42,6 +61,14 @@ func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuo
 		}
 		if operatorRole != common.RoleRootUser && operatorRole <= user.Role {
 			return ErrUserQuotaPermission
+		}
+		var prior ArrivalEvent
+		found := tx.Where("source = ? AND reference = ?", "admin", opt.Reference).Limit(1).Find(&prior)
+		if found.Error != nil {
+			return found.Error
+		}
+		if prior.Id != 0 {
+			return ErrInvalidUserQuotaAdjustment
 		}
 		if user.Quota > common.MaxWalletQuota || user.Quota < -common.MaxWalletQuota {
 			return ErrWalletQuotaLimitExceeded
@@ -70,9 +97,16 @@ func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuo
 		}
 		adjustment = UserQuotaAdjustment{UserID: user.Id, Username: user.Username, Before: user.Quota, After: after}
 		if after <= user.Quota {
+			if opt.RebateEnabled {
+				return ErrInvalidUserQuotaAdjustment
+			}
 			return nil
 		}
-		return RecordArrivalTx(tx, ArrivalInput{Source: "admin", Reference: reference, UserId: userID, Quota: after - user.Quota})
+		var receipt *PaymentReceipt
+		if opt.ReceivedAmount != nil {
+			receipt = NewPaymentReceipt(decimal.NewFromFloat(*opt.ReceivedAmount), "CNY", "registered_receipt")
+		}
+		return RecordArrivalTx(tx, ArrivalInput{Source: "admin", Reference: opt.Reference, UserId: userID, Quota: after - user.Quota, Payment: receipt, Participate: opt.RebateEnabled})
 	})
 	if err != nil {
 		return nil, err
@@ -87,7 +121,7 @@ func AdjustUserQuota(userID, operatorRole int, mode string, value int) (*UserQuo
 		}
 	}
 	if delta > 0 {
-		ProcessArrivalEffects("admin", reference, userID)
+		ProcessArrivalEffects("admin", opt.Reference, userID)
 	}
 	return &adjustment, nil
 }

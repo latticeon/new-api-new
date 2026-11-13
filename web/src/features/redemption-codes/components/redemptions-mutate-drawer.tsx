@@ -50,6 +50,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import {
   formatQuotaWithCurrency,
   getCurrencyDisplay,
@@ -333,6 +334,64 @@ export function RedemptionsMutateDrawer({
                             : t('Enter the quota amount in {{currency}}', {
                                 currency: currencyLabel,
                               })}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='sale_price'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('Registered sale price per code (CNY)')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type='number'
+                            min={0}
+                            max={Number.MAX_SAFE_INTEGER}
+                            step='any'
+                            value={field.value ?? ''}
+                            onChange={(event) =>
+                              field.onChange(
+                                event.target.value === ''
+                                  ? null
+                                  : event.target.valueAsNumber
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Optional administrator-registered price, not a verified online payment. Leave empty if unknown; zero means free.'
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name='rebate_enabled'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('Participate in arrival rebates')}
+                        </FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Rebates use the registered CNY amount and the applicable inviter rule, not the code quota.'
+                          )}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

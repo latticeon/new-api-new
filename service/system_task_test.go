@@ -407,3 +407,41 @@ func TestLogCleanupDatabaseMatrix(t *testing.T) {
 		})
 	}
 }
+
+func TestArrivalRebateRetrySchedulesDurablePendingOnce(t *testing.T) {
+	truncate(t)
+	require.NoError(t, model.DB.AutoMigrate(&model.ArrivalEvent{}))
+	t.Cleanup(func() { model.DB.Exec("DELETE FROM arrival_events") })
+	payment := operation_setting.GetPaymentSetting()
+	before := *payment
+	t.Cleanup(func() { *payment = before })
+	payment.ComplianceConfirmed = true
+	payment.ComplianceTermsVersion = operation_setting.CurrentComplianceTermsVersion
+	handler := arrivalRebateRetryHandler{}
+	withSystemTaskRegistry(t, handler)
+	assert.False(t, handler.Enabled(), "no pending business means no retry task")
+	user := model.User{Username: "retry-recipient", AffCode: "retry-recipient", Quota: 10}
+	require.NoError(t, model.DB.Create(&user).Error)
+	event := model.ArrivalEvent{Source: "online", Reference: "retry-receipt", InviterId: user.Id, Reward: 25, Destination: "wallet", Status: "pending"}
+	require.NoError(t, model.DB.Create(&event).Error)
+	runSystemTaskScheduler()
+	runSystemTaskScheduler()
+	assert.EqualValues(t, 1, countSystemTasks(t, handler.Type()))
+	task, err := model.GetActiveSystemTask(handler.Type())
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	claimed, ok, err := model.ClaimSystemTask(task.ID, handler.Type(), "retry-runner", common.GetTimestamp()+60)
+	require.NoError(t, err)
+	require.True(t, ok)
+	handler.Run(context.Background(), claimed, "retry-runner")
+	_, err = model.RetryPendingArrivalRebates(100)
+	require.NoError(t, err)
+	var recipient model.User
+	require.NoError(t, model.DB.First(&recipient, user.Id).Error)
+	assert.Equal(t, 35, recipient.Quota)
+	assert.Equal(t, 25, recipient.AffHistoryQuota)
+	assert.False(t, handler.Enabled())
+	finished, err := model.GetLatestSystemTask(handler.Type())
+	require.NoError(t, err)
+	assert.Equal(t, model.SystemTaskStatusSucceeded, finished.Status)
+}

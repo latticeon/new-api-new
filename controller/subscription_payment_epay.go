@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"github.com/shopspring/decimal"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -88,6 +89,7 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		UserId:          userId,
 		PlanId:          plan.Id,
 		Money:           plan.PriceAmount,
+		PaymentSnapshot: model.PaymentReceiptJSON(model.NewPaymentReceipt(decimal.NewFromFloat(plan.PriceAmount).Round(2), "CNY", "provider_payment")),
 		TradeNo:         tradeNo,
 		PaymentMethod:   req.PaymentMethod,
 		PaymentProvider: model.PaymentProviderEpay,
@@ -160,7 +162,12 @@ func SubscriptionEpayNotify(c *gin.Context) {
 	LockOrder(verifyInfo.ServiceTradeNo)
 	defer UnlockOrder(verifyInfo.ServiceTradeNo)
 
-	if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
+	paid, amountErr := decimal.NewFromString(params["money"])
+	var receipt *model.PaymentReceipt
+	if amountErr == nil {
+		receipt = model.NewPaymentReceipt(paid, "CNY", "provider_payment")
+	}
+	if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type, receipt); err != nil {
 		_, _ = c.Writer.Write([]byte("fail"))
 		return
 	}
@@ -209,7 +216,12 @@ func SubscriptionEpayReturn(c *gin.Context) {
 	if verifyInfo.TradeStatus == epay.StatusTradeSuccess {
 		LockOrder(verifyInfo.ServiceTradeNo)
 		defer UnlockOrder(verifyInfo.ServiceTradeNo)
-		if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
+		paid, amountErr := decimal.NewFromString(params["money"])
+		var receipt *model.PaymentReceipt
+		if amountErr == nil {
+			receipt = model.NewPaymentReceipt(paid, "CNY", "provider_payment")
+		}
+		if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type, receipt); err != nil {
 			c.Redirect(http.StatusFound, paymentReturnPath("/wallet?pay=fail"))
 			return
 		}

@@ -378,6 +378,16 @@ export type OperationsSettings = {
   'arrival_setting.threshold': number
   'arrival_setting.source_group': string
   'arrival_setting.target_group': string
+  'rebate_setting.enabled': boolean
+  'rebate_setting.rule': 'first' | 'every'
+  'rebate_setting.percent': number
+  'rebate_setting.max_per_invitee': number
+  'rebate_setting.quota_per_yuan': number
+  'rebate_setting.destination': 'wallet' | 'affiliate'
+  'rebate_setting.online': boolean
+  'rebate_setting.subscription': boolean
+  'rebate_setting.redemption': boolean
+  'rebate_setting.admin': boolean
   'general_setting.normalize_response_model_enabled': boolean
   ErrorMessageRewriteEnabled: boolean
   ErrorMessageRewriteRules: string

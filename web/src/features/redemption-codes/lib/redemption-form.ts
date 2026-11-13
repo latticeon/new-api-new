@@ -39,6 +39,15 @@ export function getRedemptionFormSchema(t: TFunction) {
       .min(REDEMPTION_VALIDATION.NAME_MIN_LENGTH, msg.NAME_LENGTH_INVALID)
       .max(REDEMPTION_VALIDATION.NAME_MAX_LENGTH, msg.NAME_LENGTH_INVALID),
     quota_dollars: z.number().min(0, t('Quota must be a positive number')),
+    sale_price: z
+      .number({ error: t('Enter a valid non-negative CNY sale price') })
+      .min(0, t('Enter a valid non-negative CNY sale price'))
+      .max(
+        Number.MAX_SAFE_INTEGER,
+        t('Enter a valid non-negative CNY sale price')
+      )
+      .nullable(),
+    rebate_enabled: z.boolean(),
     expired_time: z.date().nullable(),
     count: z
       .number()
@@ -51,6 +60,8 @@ export function getRedemptionFormSchema(t: TFunction) {
 export type RedemptionFormValues = {
   name: string
   quota_dollars: number
+  sale_price: number | null
+  rebate_enabled: boolean
   expired_time: Date | null
   count?: number
 }
@@ -62,6 +73,8 @@ export type RedemptionFormValues = {
 export const REDEMPTION_FORM_DEFAULT_VALUES: RedemptionFormValues = {
   name: '',
   quota_dollars: 10,
+  sale_price: null,
+  rebate_enabled: false,
   expired_time: null,
   count: 1,
 }
@@ -79,6 +92,8 @@ export function transformFormDataToPayload(
   return {
     name: data.name,
     quota: parseQuotaFromDollars(data.quota_dollars),
+    sale_price: data.sale_price,
+    rebate_enabled: data.rebate_enabled,
     expired_time: data.expired_time
       ? Math.floor(data.expired_time.getTime() / 1000)
       : 0,
@@ -95,6 +110,8 @@ export function transformRedemptionToFormDefaults(
   return {
     name: redemption.name,
     quota_dollars: quotaUnitsToEditableAmount(redemption.quota),
+    sale_price: redemption.sale_price ?? null,
+    rebate_enabled: redemption.rebate_enabled ?? false,
     expired_time:
       redemption.expired_time > 0
         ? new Date(redemption.expired_time * 1000)

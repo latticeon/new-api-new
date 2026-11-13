@@ -190,6 +190,69 @@ afterEach(() => {
 })
 
 describe('redemption drawer', () => {
+  test('loads and saves registered CNY sale price and participation without converting to quota', async () => {
+    const original = {
+      ...redemption(1),
+      sale_price: 12.5,
+      rebate_enabled: true,
+    }
+    const updates: unknown[] = []
+    apiClient.get = async () => ({ data: { success: true, data: original } })
+    apiClient.put = async (_url, data) => {
+      updates.push(data)
+      return { data: { success: true } }
+    }
+    await renderDrawer(original, {
+      quotaDisplayType: 'CNY',
+      usdExchangeRate: 7.2,
+    })
+    await waitForLoadedForm()
+    const price = screen.getByRole('spinbutton', {
+      name: 'Registered sale price per code (CNY)',
+    })
+    expect(price).toHaveValue(12.5)
+    expect(
+      screen.getByRole('switch', { name: 'Participate in arrival rebates' })
+    ).toBeChecked()
+    fireEvent.change(price, { target: { value: '0' } })
+    fireEvent.click(
+      screen.getByRole('switch', { name: 'Participate in arrival rebates' })
+    )
+    submitForm()
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0]).toMatchObject({
+      sale_price: 0,
+      rebate_enabled: false,
+      quota: original.quota,
+    })
+  })
+
+  test('clears a registered sale price to null and rejects negative prices', async () => {
+    const original = { ...redemption(1), sale_price: 10 }
+    const updates: unknown[] = []
+    apiClient.get = async () => ({ data: { success: true, data: original } })
+    apiClient.put = async (_url, data) => {
+      updates.push(data)
+      return { data: { success: true } }
+    }
+    await renderDrawer(original)
+    await waitForLoadedForm()
+    const price = screen.getByRole('spinbutton', {
+      name: 'Registered sale price per code (CNY)',
+    })
+    fireEvent.change(price, { target: { value: '-1' } })
+    submitForm()
+    await waitFor(() => expect(price).toHaveAttribute('aria-invalid', 'true'))
+    expect(updates).toHaveLength(0)
+    fireEvent.change(price, { target: { value: '' } })
+    submitForm()
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0]).toMatchObject({
+      sale_price: null,
+      rebate_enabled: false,
+    })
+  })
+
   test('shows the reported CNY quota without floating-point noise', async () => {
     const original = redemption(1, 13888889)
     apiClient.get = async () => ({ data: { success: true, data: original } })

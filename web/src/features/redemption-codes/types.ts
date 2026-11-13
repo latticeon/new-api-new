@@ -29,6 +29,8 @@ export const redemptionSchema = z.object({
   key: z.string(),
   status: z.number(), // 1: enabled, 2: disabled, 3: used
   quota: z.number(),
+  sale_price: z.number().nullable().optional(),
+  rebate_enabled: z.boolean().optional(),
   created_time: z.number(),
   redeemed_time: z.number(),
   expired_time: z.number(), // 0 for never expires
@@ -75,6 +77,8 @@ export interface RedemptionFormData {
   name: string
   quota: number
   expired_time: number
+  sale_price?: number | null
+  rebate_enabled?: boolean
   count?: number // Only for create
   status?: number // Only for status update
 }

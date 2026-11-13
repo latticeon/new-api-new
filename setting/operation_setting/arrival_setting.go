@@ -25,22 +25,32 @@ func init()                              { config.GlobalConfig.Register("arrival
 func GetArrivalSetting() *ArrivalSetting { return &arrivalSetting }
 
 // ValidateArrivalRebateOption validates each independently saved operation option.
-// Arrival rules may be edited while disabled.
+// Rules may be edited while disabled and are retained for inviter overrides.
 func ValidateArrivalRebateOption(key, value string) error {
-	if !strings.HasPrefix(key, "arrival_setting.") {
+	if !strings.HasPrefix(key, "arrival_setting.") && !strings.HasPrefix(key, "rebate_setting.") {
 		return nil
 	}
 	valid := false
 	switch key {
-	case "arrival_setting.enabled", "arrival_setting.include_admin":
+	case "arrival_setting.enabled", "arrival_setting.include_admin", "rebate_setting.enabled", "rebate_setting.online", "rebate_setting.subscription", "rebate_setting.redemption", "rebate_setting.admin":
 		valid = value == "true" || value == "false"
 	case "arrival_setting.mode":
 		valid = value == "single" || value == "cumulative"
 	case "arrival_setting.source_group", "arrival_setting.target_group":
 		valid = len(value) <= 64
-	case "arrival_setting.threshold":
+	case "arrival_setting.threshold", "rebate_setting.max_per_invitee":
 		n, err := strconv.ParseInt(value, 10, 64)
 		valid = err == nil && n >= 0 && n <= int64(common.MaxWalletQuota)
+	case "rebate_setting.percent":
+		n, err := strconv.ParseFloat(value, 64)
+		valid = err == nil && ValidRebatePercent(n)
+	case "rebate_setting.quota_per_yuan":
+		n, err := strconv.ParseFloat(value, 64)
+		valid = err == nil && n >= 0 && n <= float64(common.MaxWalletQuota)
+	case "rebate_setting.rule":
+		valid = value == "first" || value == "every"
+	case "rebate_setting.destination":
+		valid = value == "wallet" || value == "affiliate"
 	}
 	if !valid {
 		return errors.New("invalid arrival or rebate option")

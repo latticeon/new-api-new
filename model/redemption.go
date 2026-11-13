@@ -2,6 +2,8 @@ package model
 
 import (
 	"errors"
+	"github.com/shopspring/decimal"
+	"math"
 	"strconv"
 
 	"github.com/QuantumNous/new-api/common"
@@ -11,18 +13,20 @@ import (
 )
 
 type Redemption struct {
-	Id           int            `json:"id"`
-	UserId       int            `json:"user_id"`
-	Key          string         `json:"key" gorm:"type:char(32);uniqueIndex"`
-	Status       int            `json:"status" gorm:"default:1"`
-	Name         string         `json:"name" gorm:"index"`
-	Quota        int            `json:"quota" gorm:"default:100"`
-	CreatedTime  int64          `json:"created_time" gorm:"bigint"`
-	RedeemedTime int64          `json:"redeemed_time" gorm:"bigint"`
-	Count        int            `json:"count" gorm:"-:all"` // only for api request
-	UsedUserId   int            `json:"used_user_id"`
-	DeletedAt    gorm.DeletedAt `gorm:"index"`
-	ExpiredTime  int64          `json:"expired_time" gorm:"bigint"` // 过期时间，0 表示不过期
+	Id            int            `json:"id"`
+	UserId        int            `json:"user_id"`
+	Key           string         `json:"key" gorm:"type:char(32);uniqueIndex"`
+	Status        int            `json:"status" gorm:"default:1"`
+	Name          string         `json:"name" gorm:"index"`
+	Quota         int            `json:"quota" gorm:"default:100"`
+	CreatedTime   int64          `json:"created_time" gorm:"bigint"`
+	RedeemedTime  int64          `json:"redeemed_time" gorm:"bigint"`
+	Count         int            `json:"count" gorm:"-:all"` // only for api request
+	UsedUserId    int            `json:"used_user_id"`
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
+	ExpiredTime   int64          `json:"expired_time" gorm:"bigint"` // 过期时间，0 表示不过期
+	SalePrice     *float64       `json:"sale_price"`
+	RebateEnabled bool           `json:"rebate_enabled"`
 }
 
 func GetAllRedemptions(startIdx int, num int) (redemptions []*Redemption, total int64, err error) {
@@ -177,7 +181,11 @@ func Redeem(key string, userId int) (quota int, err error) {
 		if err := creditTopUpQuota(tx, userId, redemption.Quota, nil); err != nil {
 			return err
 		}
-		return RecordArrivalTx(tx, ArrivalInput{Source: "redemption", Reference: strconv.Itoa(redemption.Id), UserId: userId, Quota: redemption.Quota})
+		var receipt *PaymentReceipt
+		if redemption.SalePrice != nil {
+			receipt = NewPaymentReceipt(decimal.NewFromFloat(*redemption.SalePrice), "CNY", "registered_sale")
+		}
+		return RecordArrivalTx(tx, ArrivalInput{Source: "redemption", Reference: strconv.Itoa(redemption.Id), UserId: userId, Quota: redemption.Quota, Payment: receipt, Participate: redemption.RebateEnabled})
 	})
 	if err != nil {
 		common.SysError(common.LogText("redemption failed: %s", err.Error()))
@@ -190,6 +198,9 @@ func Redeem(key string, userId int) (quota int, err error) {
 }
 
 func (redemption *Redemption) Insert() error {
+	if redemption.SalePrice != nil && (math.IsNaN(*redemption.SalePrice) || math.IsInf(*redemption.SalePrice, 0) || *redemption.SalePrice < 0 || *redemption.SalePrice > float64(common.MaxWalletQuota)) {
+		return errors.New("invalid redemption sale price")
+	}
 	if redemption.Quota <= 0 {
 		return errors.New("redemption quota must be positive")
 	}
@@ -208,6 +219,9 @@ func (redemption *Redemption) SelectUpdate() error {
 
 // Update Make sure your token's fields is completed, because this will update non-zero values
 func (redemption *Redemption) Update() error {
+	if redemption.SalePrice != nil && (math.IsNaN(*redemption.SalePrice) || math.IsInf(*redemption.SalePrice, 0) || *redemption.SalePrice < 0 || *redemption.SalePrice > float64(common.MaxWalletQuota)) {
+		return errors.New("invalid redemption sale price")
+	}
 	if redemption.Quota <= 0 {
 		return errors.New("redemption quota must be positive")
 	}
@@ -215,7 +229,7 @@ func (redemption *Redemption) Update() error {
 		return err
 	}
 	var err error
-	err = DB.Model(redemption).Select("name", "status", "quota", "redeemed_time", "expired_time").Updates(redemption).Error
+	err = DB.Model(redemption).Select("name", "status", "quota", "redeemed_time", "expired_time", "sale_price", "rebate_enabled").Updates(redemption).Error
 	return err
 }
 

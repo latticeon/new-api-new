@@ -143,6 +143,9 @@ export interface ManageUserQuotaPayload {
   action: 'add_quota'
   mode: QuotaAdjustMode
   value: number
+  received_amount?: number | null
+  rebate_enabled?: boolean
+  reference?: string
 }
 
 // ============================================================================

@@ -28,10 +28,14 @@ import { UpdateCheckerSection } from '../maintenance/update-checker-section'
 import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 import { APIMaintenanceSection } from './api-maintenance-section'
-import { arrivalSettingsValues } from './arrival-rebate-settings'
+import {
+  arrivalSettingsValues,
+  rebateSettingsValues,
+} from './arrival-rebate-settings'
 import { ArrivalSettingsSection } from './arrival-settings-section'
 import { ErrorRewriteSection } from './error-rewrite-section'
 import { LogCleanupSection } from './log-cleanup-section'
+import { RebateSettingsSection } from './rebate-settings-section'
 
 const OPERATIONS_SECTIONS = [
   {
@@ -44,6 +48,13 @@ const OPERATIONS_SECTIONS = [
     titleKey: 'Arrival auto-grouping',
     build: (settings: OperationsSettings) => (
       <ArrivalSettingsSection defaultValues={arrivalSettingsValues(settings)} />
+    ),
+  },
+  {
+    id: 'rebates',
+    titleKey: 'Global arrival rebates',
+    build: (settings: OperationsSettings) => (
+      <RebateSettingsSection defaultValues={rebateSettingsValues(settings)} />
     ),
   },
   {

@@ -485,6 +485,11 @@ func WaffoPancakeWebhook(c *gin.Context) {
 	rawTradeNo := strings.TrimSpace(event.Data.OrderMerchantExternalID)
 	isSubscription := strings.HasPrefix(rawTradeNo, "WAFFO_PANCAKE_SUB-")
 
+	paid, amountErr := decimal.NewFromString(event.Data.Amount)
+	var receipt *model.PaymentReceipt
+	if amountErr == nil {
+		receipt = model.NewPaymentReceipt(paid, event.Data.Currency, "provider_payment")
+	}
 	if isSubscription {
 		tradeNo, err := service.ResolveWaffoPancakeSubscriptionTradeNo(event)
 		if err != nil {
@@ -497,7 +502,7 @@ func WaffoPancakeWebhook(c *gin.Context) {
 		}
 		LockOrder(tradeNo)
 		defer UnlockOrder(tradeNo)
-		if err := model.CompleteSubscriptionOrder(tradeNo, string(bodyBytes), model.PaymentProviderWaffoPancake, ""); err != nil {
+		if err := model.CompleteSubscriptionOrder(tradeNo, string(bodyBytes), model.PaymentProviderWaffoPancake, "", receipt); err != nil {
 			logger.LogError(c.Request.Context(), common.LogText("Waffo Pancake subscription completion failed trade_no=%s event_id=%s order_id=%s client_ip=%s error=%q", tradeNo, event.ID, event.Data.OrderID, c.ClientIP(), err.Error()))
 			c.String(http.StatusInternalServerError, "retry")
 			return
@@ -523,7 +528,7 @@ func WaffoPancakeWebhook(c *gin.Context) {
 	LockOrder(tradeNo)
 	defer UnlockOrder(tradeNo)
 
-	if err := model.RechargeWaffoPancake(tradeNo); err != nil {
+	if err := model.RechargeWaffoPancake(tradeNo, receipt); err != nil {
 		logger.LogError(c.Request.Context(), common.LogText("Waffo Pancake top-up processing failed trade_no=%s event_id=%s order_id=%s client_ip=%s error=%q", tradeNo, event.ID, event.Data.OrderID, c.ClientIP(), err.Error()))
 		c.String(http.StatusInternalServerError, "retry")
 		return

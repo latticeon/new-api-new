@@ -23,6 +23,7 @@ type TopUp struct {
 	CreateTime      int64   `json:"create_time"`
 	CompleteTime    int64   `json:"complete_time"`
 	Status          string  `json:"status"`
+	PaymentSnapshot string  `json:"payment_snapshot" gorm:"type:text"`
 }
 
 const (
@@ -174,7 +175,7 @@ func UpdatePendingTopUpStatus(tradeNo string, expectedPaymentProvider string, ta
 // 在同一个事务内完成，因此同一订单的并发/重复回调（包括多实例部署下）最多充值一次。
 // alreadyDone=true 表示订单此前已完成，本次为幂等重复回调。
 // 进程内的 LockOrder 只是优化，正确性由本函数的数据库行锁保证。
-func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (alreadyDone bool, err error) {
+func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string, receipt ...*PaymentReceipt) (alreadyDone bool, err error) {
 	if tradeNo == "" {
 		return false, errors.New("payment order number not provided")
 	}
@@ -212,6 +213,9 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 		}
 		topUp.CompleteTime = common.GetTimestamp()
 		topUp.Status = common.TopUpStatusSuccess
+		if len(receipt) > 0 {
+			topUp.PaymentSnapshot = receiptJSON(receipt[0])
+		}
 		if err := tx.Save(topUp).Error; err != nil {
 			return err
 		}
@@ -234,7 +238,7 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 	return false, nil
 }
 
-func Recharge(referenceId string, customerId string, callerIp string) (err error) {
+func Recharge(referenceId string, customerId string, callerIp string, receipt ...*PaymentReceipt) (err error) {
 	if referenceId == "" {
 		return errors.New("payment order number not provided")
 	}
@@ -276,6 +280,12 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 		)
 		if err != nil || quota <= 0 {
 			return ErrInvalidTopUpQuota
+		}
+		if len(receipt) > 0 {
+			topUp.PaymentSnapshot = receiptJSON(receipt[0])
+			if err := tx.Save(topUp).Error; err != nil {
+				return err
+			}
 		}
 		return creditTopUpArrivalTx(tx, topUp, quota, map[string]any{"stripe_customer": customerId})
 	})
@@ -513,6 +523,8 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 			return err
 		}
 
+		// Manual completion has no verified provider-success amount. Do not
+		// relabel the checkout quote as paid or manufacture a rebate receipt.
 		if err := RecordArrivalTx(tx, ArrivalInput{Source: "online", Reference: topUp.TradeNo, UserId: topUp.UserId, Quota: quotaToAdd}); err != nil {
 			return err
 		}
@@ -532,7 +544,7 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 	RecordTopupLog(userId, common.NewMessage("Administrator completed the order, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"quota": logger.FormatQuota(quotaToAdd), "amount": fmt.Sprintf("%f", payMoney)}), callerIp, paymentMethod, "admin")
 	return nil
 }
-func RechargeCreem(referenceId string, customerEmail string, customerName string, callerIp string) (err error) {
+func RechargeCreem(referenceId string, customerEmail string, customerName string, callerIp string, receipt ...*PaymentReceipt) (err error) {
 	if referenceId == "" {
 		return errors.New("payment order number not provided")
 	}
@@ -593,6 +605,12 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 			}
 		}
 
+		if len(receipt) > 0 {
+			topUp.PaymentSnapshot = receiptJSON(receipt[0])
+			if err := tx.Save(topUp).Error; err != nil {
+				return err
+			}
+		}
 		return creditTopUpArrivalTx(tx, topUp, quota, updateFields)
 	})
 
@@ -611,7 +629,7 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 	return nil
 }
 
-func RechargeWaffo(tradeNo string, callerIp string) (err error) {
+func RechargeWaffo(tradeNo string, callerIp string, receipt ...*PaymentReceipt) (err error) {
 	if tradeNo == "" {
 		return errors.New("payment order number not provided")
 	}
@@ -651,6 +669,9 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 
 		topUp.CompleteTime = common.GetTimestamp()
 		topUp.Status = common.TopUpStatusSuccess
+		if len(receipt) > 0 {
+			topUp.PaymentSnapshot = receiptJSON(receipt[0])
+		}
 		if err := tx.Save(topUp).Error; err != nil {
 			return err
 		}
@@ -672,7 +693,7 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 	return nil
 }
 
-func RechargeWaffoPancake(tradeNo string) (err error) {
+func RechargeWaffoPancake(tradeNo string, receipt ...*PaymentReceipt) (err error) {
 	if tradeNo == "" {
 		return errors.New("payment order number not provided")
 	}
@@ -716,6 +737,12 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 			return err
 		}
 
+		if len(receipt) > 0 {
+			topUp.PaymentSnapshot = receiptJSON(receipt[0])
+			if err := tx.Save(topUp).Error; err != nil {
+				return err
+			}
+		}
 		return creditTopUpArrivalTx(tx, topUp, quotaToAdd, nil)
 	})
 
@@ -737,5 +764,5 @@ func creditTopUpArrivalTx(tx *gorm.DB, topUp *TopUp, quota int, updates map[stri
 	if err := creditTopUpQuota(tx, topUp.UserId, quota, updates); err != nil {
 		return err
 	}
-	return RecordArrivalTx(tx, ArrivalInput{Source: "online", Reference: topUp.TradeNo, UserId: topUp.UserId, Quota: quota})
+	return RecordArrivalTx(tx, ArrivalInput{Source: "online", Reference: topUp.TradeNo, UserId: topUp.UserId, Quota: quota, Payment: parseReceipt(topUp.PaymentSnapshot), Participate: true})
 }

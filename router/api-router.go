@@ -174,7 +174,10 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.DELETE("/:id/2fa", controller.AdminDisable2FA)
 			}
 		}
-
+		rebateRoute := apiRouter.Group("/rebates", middleware.DisableCache(), middleware.AdminAuth())
+		{
+			rebateRoute.POST("/:id/retry", controller.AdminRetryRebate)
+		}
 		hotRestartRoute := apiRouter.Group("/hot_restart", middleware.RootAuth())
 		hotRestartRoute.GET("/status", controller.GetHotRestartStatus)
 		hotRestartRoute.POST("/", middleware.CriticalRateLimit(), controller.HotRestart)

@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 // types fall back to their raw identifier so the panel never shows blank.
 export const SYSTEM_TASK_TYPE_LABEL: Record<string, string> = {
   log_cleanup: 'Log cleanup',
+  arrival_rebate_retry: 'Pending rebate retry',
   channel_test: 'Batch channel test',
   channel_balance: 'Batch balance update',
   model_update: 'Batch upstream model update',

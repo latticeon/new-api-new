@@ -1102,10 +1102,13 @@ func updateAdminPermissionsForUserInTx(c *gin.Context, tx *gorm.DB, userID int, 
 }
 
 type ManageRequest struct {
-	Id     int    `json:"id"`
-	Action string `json:"action"`
-	Value  int    `json:"value"`
-	Mode   string `json:"mode"`
+	Id             int      `json:"id"`
+	Action         string   `json:"action"`
+	Value          int      `json:"value"`
+	Mode           string   `json:"mode"`
+	RebateEnabled  bool     `json:"rebate_enabled"`
+	ReceivedAmount *float64 `json:"received_amount"`
+	Reference      string   `json:"reference"` // required idempotency key for registered receipt
 }
 
 // ManageUser Only admin user can do this

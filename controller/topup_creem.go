@@ -311,7 +311,8 @@ func handleCheckoutCompleted(c *gin.Context, event *CreemWebhookEvent) {
 	// Try complete subscription order first
 	LockOrder(referenceId)
 	defer UnlockOrder(referenceId)
-	if err := model.CompleteSubscriptionOrder(referenceId, common.GetJsonString(event), model.PaymentProviderCreem, ""); err == nil {
+	receipt := model.NewPaymentReceipt(decimal.NewFromInt(int64(event.Object.Order.AmountPaid)).Div(decimal.NewFromInt(100)), event.Object.Order.Currency, "provider_payment")
+	if err := model.CompleteSubscriptionOrder(referenceId, common.GetJsonString(event), model.PaymentProviderCreem, "", receipt); err == nil {
 		logger.LogInfo(c.Request.Context(), common.LogText("Creem subscription order processed trade_no=%s creem_order_id=%s", referenceId, event.Object.Order.Id))
 		c.Status(http.StatusOK)
 		return
@@ -356,7 +357,7 @@ func handleCheckoutCompleted(c *gin.Context, event *CreemWebhookEvent) {
 		logger.LogWarn(c.Request.Context(), common.LogText("Creem callback customer name is empty trade_no=%s creem_order_id=%s", referenceId, event.Object.Order.Id))
 	}
 
-	err := model.RechargeCreem(referenceId, customerEmail, customerName, c.ClientIP())
+	err := model.RechargeCreem(referenceId, customerEmail, customerName, c.ClientIP(), receipt)
 	if err != nil {
 		logger.LogError(c.Request.Context(), common.LogText("Creem top-up processing failed trade_no=%s creem_order_id=%s client_ip=%s error=%q", referenceId, event.Object.Order.Id, c.ClientIP(), err.Error()))
 		c.AbortWithStatus(http.StatusInternalServerError)

@@ -287,7 +287,21 @@ func fulfillOrder(ctx context.Context, event stripe.Event, referenceId string, c
 		"currency":     strings.ToUpper(event.GetObjectValue("currency")),
 		"event_type":   string(event.Type),
 	}
-	if err := model.CompleteSubscriptionOrder(referenceId, common.GetJsonString(payload), model.PaymentProviderStripe, ""); err == nil {
+	paidMinor, parseErr := decimal.NewFromString(event.GetObjectValue("amount_total"))
+	var receipt *model.PaymentReceipt
+	if parseErr == nil {
+		currency := strings.ToUpper(event.GetObjectValue("currency"))
+		divisor := int64(100)
+		switch currency {
+		case "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "VND", "VUV", "XAF", "XOF", "XPF":
+			divisor = 1
+		case "BHD", "JOD", "KWD", "OMR", "TND":
+			divisor = 1000
+		}
+		// Stripe represents ISK and UGX charges with two decimal places.
+		receipt = model.NewPaymentReceipt(paidMinor.Div(decimal.NewFromInt(divisor)), currency, "provider_payment")
+	}
+	if err := model.CompleteSubscriptionOrder(referenceId, common.GetJsonString(payload), model.PaymentProviderStripe, "", receipt); err == nil {
 		logger.LogInfo(ctx, common.LogText("Stripe subscription order processed trade_no=%s event_type=%s client_ip=%s", referenceId, string(event.Type), callerIp))
 		return
 	} else if err != nil && !errors.Is(err, model.ErrSubscriptionOrderNotFound) {
@@ -295,7 +309,7 @@ func fulfillOrder(ctx context.Context, event stripe.Event, referenceId string, c
 		return
 	}
 
-	err := model.Recharge(referenceId, customerId, callerIp)
+	err := model.Recharge(referenceId, customerId, callerIp, receipt)
 	if err != nil {
 		logger.LogError(ctx, common.LogText("Stripe top-up processing failed trade_no=%s event_type=%s client_ip=%s error=%q", referenceId, string(event.Type), callerIp, err.Error()))
 		return

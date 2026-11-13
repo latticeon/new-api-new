@@ -16,6 +16,7 @@ import (
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 	"github.com/thanhpk/randstr"
 	waffo "github.com/waffo-com/waffo-go"
 	"github.com/waffo-com/waffo-go/config"
@@ -225,6 +226,7 @@ func RequestWaffoPay(c *gin.Context) {
 		UserId:          id,
 		Amount:          amount,
 		Money:           payMoney,
+		PaymentSnapshot: model.PaymentReceiptJSON(model.NewPaymentReceipt(decimal.NewFromFloat(payMoney).Round(2), getWaffoCurrency(), "provider_payment")),
 		TradeNo:         merchantOrderId,
 		PaymentMethod:   model.PaymentMethodWaffo,
 		PaymentProvider: model.PaymentProviderWaffo,
@@ -411,7 +413,12 @@ func handleWaffoPayment(c *gin.Context, wh *core.WebhookHandler, result *core.Pa
 	LockOrder(merchantOrderId)
 	defer UnlockOrder(merchantOrderId)
 
-	if err := model.RechargeWaffo(merchantOrderId, c.ClientIP()); err != nil {
+	paid, amountErr := decimal.NewFromString(result.OrderAmount)
+	var receipt *model.PaymentReceipt
+	if amountErr == nil {
+		receipt = model.NewPaymentReceipt(paid, result.OrderCurrency, "provider_payment")
+	}
+	if err := model.RechargeWaffo(merchantOrderId, c.ClientIP(), receipt); err != nil {
 		logger.LogError(c.Request.Context(), common.LogText("Waffo top-up processing failed trade_no=%s client_ip=%s error=%q", merchantOrderId, c.ClientIP(), err.Error()))
 		sendWaffoWebhookResponse(c, wh, false, err.Error())
 		return

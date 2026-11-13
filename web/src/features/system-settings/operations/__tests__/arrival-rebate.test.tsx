@@ -27,8 +27,10 @@ import { SettingsPageProvider } from '../../components/settings-page-context'
 import {
   ARRIVAL_REBATE_DEFAULT_OPTIONS,
   arrivalSettingsValues,
+  rebateSettingsValues,
 } from '../arrival-rebate-settings'
 import { ArrivalSettingsSection } from '../arrival-settings-section'
+import { RebateSettingsSection } from '../rebate-settings-section'
 
 const clients: QueryClient[] = []
 const actionContainers: HTMLElement[] = []
@@ -38,7 +40,7 @@ afterEach(() => {
   actionContainers.splice(0).forEach((container) => container.remove())
 })
 
-function renderSettings() {
+function renderSettings(kind: 'arrival' | 'rebate') {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   })
@@ -49,19 +51,80 @@ function renderSettings() {
   return render(
     <QueryClientProvider client={client}>
       <SettingsPageProvider actionsContainer={actions}>
-        <ArrivalSettingsSection
-          defaultValues={arrivalSettingsValues(ARRIVAL_REBATE_DEFAULT_OPTIONS)}
-        />
+        {kind === 'arrival' ? (
+          <ArrivalSettingsSection
+            defaultValues={arrivalSettingsValues(
+              ARRIVAL_REBATE_DEFAULT_OPTIONS
+            )}
+          />
+        ) : (
+          <RebateSettingsSection
+            defaultValues={rebateSettingsValues(ARRIVAL_REBATE_DEFAULT_OPTIONS)}
+          />
+        )}
       </SettingsPageProvider>
     </QueryClientProvider>
   )
 }
 
+it('edits and saves frequency, sources and lifetime cap while global rebates remain disabled', async () => {
+  const put = vi
+    .spyOn(api, 'put')
+    .mockResolvedValue({ data: { success: true } })
+  renderSettings('rebate')
+  const user = userEvent.setup()
+  expect(
+    screen.getByRole('switch', { name: 'Enable global rebates' })
+  ).not.toBeChecked()
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: 'Rebate frequency' }),
+    'every'
+  )
+  fireEvent.change(
+    screen.getByRole('spinbutton', {
+      name: 'Lifetime cap per invitee (quota units)',
+    }),
+    { target: { value: '250' } }
+  )
+  await user.click(
+    screen.getByRole('switch', {
+      name: 'Redemption codes — registered sale price (CNY)',
+    })
+  )
+  expect(
+    screen.getByRole('switch', {
+      name: 'Online top-ups — actual paid order amount',
+    })
+  ).toBeEnabled()
+  expect(
+    screen.getByRole('switch', {
+      name: 'Subscription purchases — actual paid order amount',
+    })
+  ).toBeEnabled()
+  expect(
+    screen.getByRole('switch', {
+      name: 'Administrator additions — declared received amount (CNY)',
+    })
+  ).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+  await waitFor(() => expect(put).toHaveBeenCalledTimes(3))
+  expect(put.mock.calls.map((call) => call[1])).toEqual(
+    expect.arrayContaining([
+      { key: 'rebate_setting.rule', value: 'every' },
+      { key: 'rebate_setting.max_per_invitee', value: 250 },
+      { key: 'rebate_setting.redemption', value: true },
+    ])
+  )
+  expect(
+    screen.getByRole('switch', { name: 'Enable global rebates' })
+  ).not.toBeChecked()
+})
+
 it('rejects an enabled arrival rule without a positive threshold and target, then saves the rule before enabling', async () => {
   const put = vi
     .spyOn(api, 'put')
     .mockResolvedValue({ data: { success: true } })
-  renderSettings()
+  renderSettings('arrival')
   const user = userEvent.setup()
   await user.click(
     screen.getByRole('switch', { name: 'Enable arrival auto-grouping' })
@@ -83,4 +146,21 @@ it('rejects an enabled arrival rule without a positive threshold and target, the
     key: 'arrival_setting.enabled',
     value: true,
   })
+})
+
+it('resets unsaved rebate rules without issuing a request', async () => {
+  const put = vi
+    .spyOn(api, 'put')
+    .mockResolvedValue({ data: { success: true } })
+  renderSettings('rebate')
+  const user = userEvent.setup()
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: 'Rebate frequency' }),
+    'every'
+  )
+  await user.click(screen.getByRole('button', { name: 'Reset' }))
+  expect(
+    screen.getByRole('combobox', { name: 'Rebate frequency' })
+  ).toHaveValue('first')
+  expect(put).not.toHaveBeenCalled()
 })
