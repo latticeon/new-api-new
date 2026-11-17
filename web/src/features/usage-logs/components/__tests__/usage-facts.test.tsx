@@ -64,7 +64,11 @@ function makeLog(other: LogOtherData): UsageLog {
   }
 }
 
-function renderDetails(other: LogOtherData, promptTokens = 0): QueryClient {
+function renderDetails(
+  other: LogOtherData,
+  promptTokens = 0,
+  completionTokens = 0
+): QueryClient {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -79,7 +83,11 @@ function renderDetails(other: LogOtherData, promptTokens = 0): QueryClient {
   render(
     <QueryClientProvider client={queryClient}>
       <DetailsDialog
-        log={{ ...makeLog(other), prompt_tokens: promptTokens }}
+        log={{
+          ...makeLog(other),
+          prompt_tokens: promptTokens,
+          completion_tokens: completionTokens,
+        }}
         isAdmin={false}
         isRoot={false}
         open
@@ -93,6 +101,42 @@ function renderDetails(other: LogOtherData, promptTokens = 0): QueryClient {
 function rowValue(label: string): string | null {
   return screen.getByText(label).nextElementSibling?.textContent ?? null
 }
+
+test.each([
+  {
+    other: { reasoning_tokens: 1200, text_tokens: 300 },
+    reasoning: '1,200',
+    body: '300',
+  },
+  {
+    other: { reasoning_tokens: 1500, text_tokens: 0 },
+    reasoning: '1,500',
+    body: '0',
+  },
+])(
+  'shows recorded reasoning and body below total output in details ($body body)',
+  ({ other, reasoning, body }) => {
+    const queryClient = renderDetails(other, 100, 1500)
+    expect(rowValue('Output Tokens')).toBe('1,500')
+    expect(rowValue('Reasoning')).toBe(reasoning)
+    expect(rowValue('Body')).toBe(body)
+    expect(
+      screen
+        .getByText('Output Tokens')
+        .compareDocumentPosition(screen.getByText('Reasoning')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    queryClient.clear()
+  }
+)
+
+test('leaves the split unknown for historical logs with only total output', () => {
+  const queryClient = renderDetails({}, 100, 1500)
+  expect(rowValue('Output Tokens')).toBe('1,500')
+  expect(screen.queryByText('Reasoning')).toBeNull()
+  expect(screen.queryByText('Body')).toBeNull()
+  queryClient.clear()
+})
 
 test('shows the recorded request and response models in log details', () => {
   const queryClient = renderDetails({

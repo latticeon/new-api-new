@@ -1741,3 +1741,70 @@ func TestPostTextConsumeQuotaLogsMissingUsageAsStructuredContent(t *testing.T) {
 		map[string]any{"key": "Upstream returned no usage, so nothing was charged (possibly an upstream timeout)"},
 	}, other["content_parts"])
 }
+
+func TestPostTextConsumeQuotaLogsOutputBreakdownWithoutChangingBilling(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, tc := range []struct {
+		name                        string
+		usage                       *dto.Usage
+		completion, reasoning, text int
+		split                       bool
+	}{
+		{name: "unknown stays unknown", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20}, completion: 20},
+		{name: "chat infers body", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: 6}}, completion: 20, reasoning: 6, text: 14, split: true},
+		{name: "explicit text wins", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: 6, TextTokens: 5, AudioTokens: 4}}, completion: 20, reasoning: 6, text: 5, split: true},
+		{name: "text without reasoning", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{TextTokens: 8}}, completion: 20, text: 8, split: true},
+		{name: "media excluded from inferred body", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: 6, AudioTokens: 4, ImageTokens: 3}}, completion: 20, reasoning: 6, text: 7, split: true},
+		{name: "oversized reasoning bounded", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: math.MaxInt, TextTokens: math.MaxInt}}, completion: 20, reasoning: 20, split: true},
+		{name: "negative reasoning and oversized text bounded", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: -1, TextTokens: math.MaxInt}}, completion: 20, text: 20, split: true},
+		{name: "negative details stay unknown", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: -1, TextTokens: -1}}, completion: 20},
+		{name: "oversized media cannot overflow body", usage: &dto.Usage{PromptTokens: 100, CompletionTokens: 20, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: 6, AudioTokens: math.MaxInt, ImageTokens: math.MaxInt}}, completion: 20, reasoning: 6, split: true},
+		{name: "responses uses canonical snapshot and output details", usage: &dto.Usage{CompletionTokens: 999, BillingUsage: dto.NewOpenAIResponsesBillingUsage(&dto.Usage{InputTokens: 100, OutputTokens: 20, OutputTokensDetails: &dto.OutputTokenDetails{ReasoningTokens: 6, AudioTokens: 4}})}, completion: 20, reasoning: 6, text: 10, split: true},
+		{name: "gemini canonical thoughts and media", usage: &dto.Usage{BillingUsage: dto.NewGeminiChatBillingUsage(&dto.GeminiUsageMetadata{PromptTokenCount: 100, CandidatesTokenCount: 14, ThoughtsTokenCount: 6, CandidatesTokensDetails: []dto.GeminiPromptTokensDetails{{Modality: "AUDIO", TokenCount: 4}, {Modality: "IMAGE", TokenCount: 3}}})}, completion: 20, reasoning: 6, text: 7, split: true},
+		{name: "zero logged output preserves waiver", usage: &dto.Usage{PromptTokens: 100, CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: 6, TextTokens: 5}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			truncate(t)
+			const userID, channelID = 64, 64
+			seedUser(t, userID, 10_000)
+			seedChannel(t, channelID)
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ctx.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
+			info := &relaycommon.RelayInfo{
+				UserId: userID, OriginModelName: "output-details", UsingGroup: "default", StartTime: time.Now(),
+				RelayMode:   relayconstant.RelayModeChatCompletions,
+				ChannelMeta: &relaycommon.ChannelMeta{ChannelId: channelID},
+				PriceData:   hosttypes.PriceData{ModelRatio: 1, CompletionRatio: 1, GroupRatioInfo: hosttypes.GroupRatioInfo{GroupRatio: 1}},
+			}
+			info.ChannelSetting.ZeroOutputNoBilling = true
+			original, err := common.Marshal(tc.usage)
+			require.NoError(t, err)
+			PostTextConsumeQuota(ctx, info, tc.usage, nil)
+			log := getLastLog(t)
+			require.NotNil(t, log)
+			assert.Equal(t, tc.completion, log.CompletionTokens)
+			wantQuota := 100 + tc.completion
+			if tc.completion == 0 {
+				wantQuota = 0
+			}
+			assert.Equal(t, wantQuota, log.Quota)
+			var other map[string]any
+			require.NoError(t, common.UnmarshalJsonStr(log.Other, &other))
+			if tc.split {
+				assert.Equal(t, float64(tc.reasoning), other["reasoning_tokens"])
+				assert.Equal(t, float64(tc.text), other["text_tokens"])
+			} else {
+				assert.NotContains(t, other, "reasoning_tokens")
+				assert.NotContains(t, other, "text_tokens")
+			}
+			if tc.completion == 0 {
+				assert.Equal(t, "zero_output_tokens", other["billing_waiver"])
+			} else {
+				assert.NotContains(t, other, "billing_waiver")
+			}
+			unchanged, err := common.Marshal(tc.usage)
+			require.NoError(t, err)
+			assert.Equal(t, string(original), string(unchanged), "logging must not mutate upstream usage")
+		})
+	}
+}

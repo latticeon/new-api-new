@@ -7922,6 +7922,7 @@
     "Log cleanup timestamp must be in the past": "Log cleanup timestamp must be in the past",
     "No log rows were deleted": "No log rows were deleted",
     "Invalid log cleanup setting": "Invalid log cleanup setting",
-    "Log retention must be between 1 and 36500 days": "Log retention must be between 1 and 36500 days"
+    "Log retention must be between 1 and 36500 days": "Log retention must be between 1 and 36500 days",
+    "Body": "Body"
   }
 }

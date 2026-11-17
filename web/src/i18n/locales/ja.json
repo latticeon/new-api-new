@@ -7922,6 +7922,7 @@
     "Log cleanup timestamp must be in the past": "ログクリーンアップの基準日時は過去にしてください",
     "No log rows were deleted": "ログは削除されませんでした",
     "Invalid log cleanup setting": "ログクリーンアップ設定が無効です",
-    "Log retention must be between 1 and 36500 days": "ログ保持日数は 1～36500 日で指定してください"
+    "Log retention must be between 1 and 36500 days": "ログ保持日数は 1～36500 日で指定してください",
+    "Body": "本文"
   }
 }

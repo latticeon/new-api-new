@@ -78,17 +78,26 @@ function DetailPreview(props: {
   other: LogOtherData
   isAdmin: boolean
   type?: number
+  columnId?: string
+  promptTokens?: number
+  completionTokens?: number
 }) {
   const table = useReactTable({
-    data: [makeLog(props.other, props.type)],
+    data: [
+      {
+        ...makeLog(props.other, props.type),
+        prompt_tokens: props.promptTokens ?? 0,
+        completion_tokens: props.completionTokens ?? 0,
+      },
+    ],
     columns: useCommonLogsColumns(props.isAdmin, false),
     getCoreRowModel: getCoreRowModel(),
   })
   const cell = table
     .getRowModel()
     .rows[0].getAllCells()
-    .find((item) => item.column.id === 'content')
-  if (!cell) throw new Error('The log must have a content column')
+    .find((item) => item.column.id === (props.columnId ?? 'content'))
+  if (!cell) throw new Error('The requested log column must exist')
   return flexRender(cell.column.columnDef.cell, cell.getContext())
 }
 const plugin = {
@@ -501,3 +510,70 @@ test.each(['missing schema', 'unsupported expression', 'unknown tier'])(
     )
   }
 )
+
+test.each([
+  {
+    name: 'recorded split',
+    other: { reasoning_tokens: 1200, text_tokens: 300 },
+    reasoning: 'Reasoning: 1,200',
+    body: 'Body: 300',
+  },
+  {
+    name: 'known zero body',
+    other: { reasoning_tokens: 1500, text_tokens: 0 },
+    reasoning: 'Reasoning: 1,500',
+    body: 'Body: 0',
+  },
+  { name: 'unknown historical split', other: {}, reasoning: null, body: null },
+  {
+    name: 'invalid recorded counts',
+    other: { reasoning_tokens: -1, text_tokens: 1.5 },
+    reasoning: null,
+    body: null,
+  },
+])(
+  'desktop tokens preserve totals with $name',
+  ({ other, reasoning, body }) => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <DetailPreview
+          other={other}
+          isAdmin={false}
+          columnId='prompt_tokens'
+          promptTokens={100}
+          completionTokens={1500}
+        />
+      </I18nextProvider>
+    )
+    expect(screen.getByText('100 / 1,500')).toBeVisible()
+    if (reasoning && body) {
+      expect(screen.getByText(reasoning)).toBeVisible()
+      expect(screen.getByText(body)).toBeVisible()
+    } else {
+      expect(screen.queryByText(/^Reasoning:/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/^Body:/)).not.toBeInTheDocument()
+    }
+  }
+)
+
+test('recorded token labels and number formatting update when the viewer changes language', async () => {
+  i18n.addResourceBundle('de', 'translation', {
+    Reasoning: 'Denken',
+    Body: 'Text',
+  })
+  render(
+    <I18nextProvider i18n={i18n}>
+      <DetailPreview
+        other={{ reasoning_tokens: 1200, text_tokens: 300 }}
+        isAdmin={false}
+        columnId='prompt_tokens'
+        promptTokens={100}
+        completionTokens={1500}
+      />
+    </I18nextProvider>
+  )
+  expect(screen.getByText('Reasoning: 1,200')).toBeVisible()
+  await act(() => i18n.changeLanguage('de'))
+  expect(screen.getByText('Denken: 1.200')).toBeVisible()
+  expect(screen.getByText('Text: 300')).toBeVisible()
+})

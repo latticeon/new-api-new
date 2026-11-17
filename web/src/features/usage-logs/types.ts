@@ -271,6 +271,9 @@ export interface LogOtherData {
   audio_output?: number
   text_input?: number
   text_output?: number
+  // Observed output details; absent means the split is unknown.
+  reasoning_tokens?: number
+  text_tokens?: number
   cache_tokens?: number
   image_cache_tokens?: number
   billing_tokens?: Record<string, number>

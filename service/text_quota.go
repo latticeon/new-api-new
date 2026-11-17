@@ -35,6 +35,45 @@ func appendToolSurchargeLogInfo(other *model.LogOther, items []ToolSurchargeItem
 	other.SetPublic("tool_surcharges", items)
 }
 
+// appendOutputTokenLogInfo records an observational split of the logged output.
+// DTO scalar zeros cannot distinguish missing details from explicit zero, so a
+// positive reasoning or text count is required before exposing a split.
+func appendOutputTokenLogInfo(other *model.LogOther, usage *dto.Usage, completionTokens int) {
+	if usage == nil || completionTokens <= 0 {
+		return
+	}
+	details := usage.CompletionTokenDetails
+	if output := usage.OutputTokensDetails; output != nil {
+		if details.ReasoningTokens == 0 {
+			details.ReasoningTokens = output.ReasoningTokens
+		}
+		if details.TextTokens == 0 {
+			details.TextTokens = output.TextTokens
+		}
+		if details.AudioTokens == 0 {
+			details.AudioTokens = output.AudioTokens
+		}
+		if details.ImageTokens == 0 {
+			details.ImageTokens = output.ImageTokens
+		}
+	}
+	if details.ReasoningTokens <= 0 && details.TextTokens <= 0 {
+		return
+	}
+	reasoning := min(max(details.ReasoningTokens, 0), completionTokens)
+	remaining := completionTokens - reasoning
+	text := min(max(details.TextTokens, 0), remaining)
+	if details.TextTokens <= 0 && reasoning > 0 {
+		// Subtract separately with bounds to avoid overflow and never label known
+		// audio/image output as body text. Explicit text remains authoritative.
+		remaining -= min(max(details.AudioTokens, 0), remaining)
+		remaining -= min(max(details.ImageTokens, 0), remaining)
+		text = remaining
+	}
+	other.SetPublic("reasoning_tokens", reasoning)
+	other.SetPublic("text_tokens", text)
+}
+
 type textQuotaSummary struct {
 	PromptTokens           int
 	CompletionTokens       int
@@ -505,6 +544,7 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		other = GenerateTextOtherInfo(ctx, relayInfo, summary.ModelRatio, summary.GroupRatio, summary.CompletionRatio, summary.CacheTokens, summary.CacheRatio, summary.ModelPrice, relayInfo.PriceData.GroupRatioInfo.GroupSpecialRatio)
 	}
 	appendUsageBillingPathForLog(other, common.GetContextKeyBool(ctx, constant.ContextKeyLocalCountTokens), originUsage)
+	appendOutputTokenLogInfo(other, billingUsage, summary.CompletionTokens)
 	if zeroOutputWaived {
 		other.SetPublic("billing_waiver", "zero_output_tokens")
 	}

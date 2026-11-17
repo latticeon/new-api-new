@@ -337,3 +337,27 @@ it('shows loading placeholders without displaying stale log fields', () => {
     screen.queryByRole('button', { name: /^Model:/ })
   ).not.toBeInTheDocument()
 })
+
+it('shows recorded reasoning and zero body alongside the unchanged mobile total', () => {
+  renderLogs({
+    logs: [
+      {
+        ...log,
+        other: JSON.stringify({ reasoning_tokens: 800, text_tokens: 0 }),
+      },
+    ],
+  })
+  expect(screen.getByText('Output').parentElement).toHaveTextContent('800')
+  expect(screen.getByText('Reasoning: 800')).toBeVisible()
+  expect(screen.getByText('Body: 0')).toBeVisible()
+  expect(screen.getByText('Reasoning: 800').parentElement).toHaveClass(
+    'flex-wrap'
+  )
+})
+
+it('does not infer mobile reasoning or body when the log has no recorded split', () => {
+  renderLogs()
+  expect(screen.getByText('Output').parentElement).toHaveTextContent('800')
+  expect(screen.queryByText(/^Reasoning:/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/^Body:/)).not.toBeInTheDocument()
+})

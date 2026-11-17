@@ -93,6 +93,7 @@ import {
 } from '../../lib/utils'
 import { USAGE_BILLING_PATH, type LogOtherData } from '../../types'
 import { ResponseModelDetails } from '../model-badge'
+import { OutputTokenBreakdown } from '../output-token-breakdown'
 import { PluginAuthorLink } from '../plugin-author-link'
 import {
   RequestPluginAdminSteps,
@@ -484,7 +485,11 @@ function TokenBreakdown(props: { log: UsageLog; other: LogOtherData }) {
 
   return (
     <DetailSection label={t('Token Breakdown')}>
-      {rows.map((row) => (
+      {rows.slice(0, 2).map((row) => (
+        <DetailRow key={row.label} label={row.label} value={row.value} mono />
+      ))}
+      <OutputTokenBreakdown other={other} details />
+      {rows.slice(2).map((row) => (
         <DetailRow key={row.label} label={row.label} value={row.value} mono />
       ))}
       {other.billing_tokens && (

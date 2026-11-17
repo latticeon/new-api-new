@@ -39,6 +39,7 @@ import {
   isTimingLogType,
 } from '../lib/utils'
 import { ModelBadge, ResponseModelDetails } from './model-badge'
+import { OutputTokenBreakdown } from './output-token-breakdown'
 import { StreamTpsCell, TimingMetricsCell } from './timing-metrics-cell'
 import { useUsageLogsContext } from './usage-logs-provider'
 
@@ -302,6 +303,7 @@ export function CommonLogMobileCard<TData>(props: {
               {log.completion_tokens.toLocaleString()}
             </span>
           </span>
+          <OutputTokenBreakdown other={other} />
           {cacheRead > 0 && (
             <span>
               {t('Cache')} ↓ {cacheRead.toLocaleString()}

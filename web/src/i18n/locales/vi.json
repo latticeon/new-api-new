@@ -7922,6 +7922,7 @@
     "Log cleanup timestamp must be in the past": "Mốc thời gian dọn nhật ký phải ở trong quá khứ",
     "No log rows were deleted": "Không có bản ghi nhật ký nào bị xóa",
     "Invalid log cleanup setting": "Cài đặt dọn nhật ký không hợp lệ",
-    "Log retention must be between 1 and 36500 days": "Thời gian lưu nhật ký phải từ 1 đến 36500 ngày"
+    "Log retention must be between 1 and 36500 days": "Thời gian lưu nhật ký phải từ 1 đến 36500 ngày",
+    "Body": "Nội dung chính"
   }
 }

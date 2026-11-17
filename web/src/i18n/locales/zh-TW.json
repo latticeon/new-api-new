@@ -7922,6 +7922,7 @@
     "Log cleanup timestamp must be in the past": "日誌清理截止時間必須早於目前時間",
     "No log rows were deleted": "未刪除任何日誌記錄",
     "Invalid log cleanup setting": "日誌清理設定無效",
-    "Log retention must be between 1 and 36500 days": "日誌保留天數必須介於 1 到 36500 天之間"
+    "Log retention must be between 1 and 36500 days": "日誌保留天數必須介於 1 到 36500 天之間",
+    "Body": "正文"
   }
 }
