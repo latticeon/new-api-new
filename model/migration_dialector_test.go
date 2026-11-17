@@ -218,3 +218,84 @@ func TestMigrationSchemaStability(t *testing.T) {
 		})
 	}
 }
+
+func TestMigrateUsersInitialID(t *testing.T) {
+	for _, dialect := range []string{"sqlite", "mysql", "postgres"} {
+		t.Run(dialect, func(t *testing.T) {
+			var dsn string
+			switch dialect {
+			case "sqlite":
+				dsn = "local"
+				previousPath := common.SQLitePath
+				common.SQLitePath = filepath.Join(t.TempDir(), "users.db")
+				t.Cleanup(func() { common.SQLitePath = previousPath })
+			case "mysql":
+				dsn = os.Getenv("TEST_MYSQL_DSN")
+			case "postgres":
+				dsn = os.Getenv("TEST_POSTGRES_DSN")
+			}
+			if dsn == "" {
+				t.Skip("test database DSN is not configured")
+			}
+			t.Setenv("USER_ID_TEST_DSN", dsn)
+			db, _, err := chooseDB("USER_ID_TEST_DSN", false)
+			require.NoError(t, err)
+			sqlDB, err := db.DB()
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, sqlDB.Close()) })
+			var version string
+			versionQuery := "SELECT version()"
+			if dialect == "sqlite" {
+				versionQuery = "SELECT sqlite_version()"
+			}
+			require.NoError(t, db.Raw(versionQuery).Scan(&version).Error)
+			t.Logf("database version: %s", version)
+			// Integration DSNs must point to a disposable test database.
+			require.False(t, db.Migrator().HasTable(&User{}), "users table already exists")
+
+			for _, scenario := range []struct {
+				name    string
+				legacy  bool
+				firstID int
+			}{
+				{name: "fresh", firstID: 5943},
+				{name: "existing", legacy: true, firstID: 1},
+			} {
+				t.Run(scenario.name, func(t *testing.T) {
+					t.Cleanup(func() { require.NoError(t, db.Migrator().DropTable(&User{})) })
+					if scenario.legacy {
+						// The previous schema used the database's default sequence start.
+						require.NoError(t, db.AutoMigrate(&User{}))
+					} else {
+						for range 2 {
+							require.NoError(t, migrateUsers(db))
+						}
+					}
+					first := User{Username: "first-user", Password: "fixture", AffCode: "first"}
+					require.NoError(t, db.Create(&first).Error)
+					assert.Equal(t, scenario.firstID, first.Id)
+					if scenario.legacy {
+						// Match the user columns from v1.0.0-rc.51 before upgrading.
+						for _, field := range []string{"ArrivalTotal", "EarnedGroup", "RebateMode", "RebatePercent"} {
+							require.NoError(t, db.Migrator().DropColumn(&User{}, field))
+						}
+					}
+					for range 2 {
+						require.NoError(t, migrateUsers(db))
+					}
+					second := User{Username: "second-user", Password: "fixture", AffCode: "second"}
+					require.NoError(t, db.Create(&second).Error)
+					assert.Equal(t, scenario.firstID+1, second.Id)
+					var preserved User
+					require.NoError(t, db.First(&preserved, first.Id).Error)
+					assert.Equal(t, first.Username, preserved.Username)
+					assert.Equal(t, first.AffCode, preserved.AffCode)
+					duplicate := User{Username: first.Username, Password: "fixture", AffCode: "duplicate"}
+					assert.Error(t, db.Create(&duplicate).Error, "username uniqueness must survive migration")
+					duplicateAff := User{Username: "duplicate-aff", Password: "fixture", AffCode: first.AffCode}
+					assert.Error(t, db.Create(&duplicateAff).Error, "invitation code uniqueness must survive migration")
+				})
+			}
+		})
+	}
+}

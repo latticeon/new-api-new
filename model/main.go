@@ -339,10 +339,13 @@ func migrateDB() error {
 		common.SysError(common.LogText("failed to migrate options primary key: %s", err.Error()))
 	}
 
+	if err := migrateUsers(DB); err != nil {
+		return err
+	}
+
 	err := DB.AutoMigrate(
 		&Channel{},
 		&Token{},
-		&User{},
 		&UserSession{},
 		&AuthFlow{},
 		&ExternalIdentityClaim{},
@@ -400,6 +403,29 @@ func migrateDB() error {
 		}
 	}
 	return nil
+}
+
+// migrateUsers sets the initial user ID only when creating the users table.
+// Existing databases retain their IDs and sequence state across restarts.
+func migrateUsers(db *gorm.DB) error {
+	if db.Migrator().HasTable(&User{}) {
+		return db.AutoMigrate(&User{})
+	}
+	if err := db.AutoMigrate(&User{}); err != nil {
+		return err
+	}
+
+	// GORM has no portable option for the initial auto-increment value.
+	switch db.Dialector.Name() {
+	case "sqlite":
+		return db.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES (?, ?)", "users", 5942).Error
+	case "mysql":
+		return db.Exec("ALTER TABLE users AUTO_INCREMENT = 5943").Error
+	case "postgres":
+		return db.Exec("SELECT setval(pg_get_serial_sequence('users', 'id'), 5943, false)").Error
+	default:
+		return fmt.Errorf("unsupported users database dialect: %s", db.Dialector.Name())
+	}
 }
 
 func migrateLOGDB() error {
