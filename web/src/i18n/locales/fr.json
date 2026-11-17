@@ -7923,6 +7923,10 @@
     "No log rows were deleted": "Aucune entrée de journal n’a été supprimée",
     "Invalid log cleanup setting": "Paramètre de nettoyage des journaux invalide",
     "Log retention must be between 1 and 36500 days": "La conservation des journaux doit être comprise entre 1 et 36500 jours",
-    "Body": "Texte"
+    "Body": "Texte",
+    "CORS rules": "Règles CORS",
+    "Cross-origin requests": "Requêtes inter-origines",
+    "Invalid CORS rules": "Règles CORS invalides",
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Le path_prefix le plus long est prioritaire. Définissez les listes autorisées avec allow_origins et allow_headers ; * autorise toute valeur, [] refuse l’accès. Les origines incluent le protocole et le port, sans chemin. Les cookies inter-origines ne sont pas activés."
   }
 }

@@ -7923,6 +7923,10 @@
     "No log rows were deleted": "未刪除任何日誌記錄",
     "Invalid log cleanup setting": "日誌清理設定無效",
     "Log retention must be between 1 and 36500 days": "日誌保留天數必須介於 1 到 36500 天之間",
-    "Body": "正文"
+    "Body": "正文",
+    "CORS rules": "跨域規則",
+    "Cross-origin requests": "跨域請求",
+    "Invalid CORS rules": "跨域規則無效",
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "依最長的 path_prefix 比對。透過 allow_origins 和 allow_headers 設定允許的來源與請求標頭；* 表示允許任意值，[] 表示拒絕存取。來源包含通訊協定和連接埠，不包含路徑。不啟用跨域 Cookie。"
   }
 }

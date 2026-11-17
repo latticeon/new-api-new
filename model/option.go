@@ -290,6 +290,11 @@ func validateOptionValue(key string, value string) error {
 	if err := operation_setting.ValidateLogCleanupOption(key, value); err != nil {
 		return err
 	}
+	if key == operation_setting.CORSRulesOption {
+		if _, err := operation_setting.ParseCORSRules(value); err != nil {
+			return common.NewMessage("Invalid parameters")
+		}
+	}
 	return nil
 }
 

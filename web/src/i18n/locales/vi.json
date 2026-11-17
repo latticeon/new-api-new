@@ -7923,6 +7923,10 @@
     "No log rows were deleted": "Không có bản ghi nhật ký nào bị xóa",
     "Invalid log cleanup setting": "Cài đặt dọn nhật ký không hợp lệ",
     "Log retention must be between 1 and 36500 days": "Thời gian lưu nhật ký phải từ 1 đến 36500 ngày",
-    "Body": "Nội dung chính"
+    "Body": "Nội dung chính",
+    "CORS rules": "Quy tắc CORS",
+    "Cross-origin requests": "Yêu cầu khác nguồn",
+    "Invalid CORS rules": "Quy tắc CORS không hợp lệ",
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Ưu tiên path_prefix dài nhất. Đặt danh sách cho phép bằng allow_origins và allow_headers; * cho phép mọi giá trị, [] từ chối truy cập. Nguồn gồm giao thức và cổng, không có đường dẫn. Cookie khác nguồn không được bật."
   }
 }

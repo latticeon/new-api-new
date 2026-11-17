@@ -7923,6 +7923,10 @@
     "No log rows were deleted": "Записи журнала не были удалены",
     "Invalid log cleanup setting": "Недопустимая настройка очистки журналов",
     "Log retention must be between 1 and 36500 days": "Срок хранения журналов должен быть от 1 до 36500 дней",
-    "Body": "Основной текст"
+    "Body": "Основной текст",
+    "CORS rules": "Правила CORS",
+    "Cross-origin requests": "Межсайтовые запросы",
+    "Invalid CORS rules": "Недопустимые правила CORS",
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Приоритет имеет самый длинный path_prefix. Задайте списки разрешённых источников и заголовков в allow_origins и allow_headers; * разрешает любые значения, [] запрещает доступ. Источник включает схему и порт, но не путь. Межсайтовые cookie не включаются."
   }
 }

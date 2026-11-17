@@ -7923,6 +7923,10 @@
     "No log rows were deleted": "ログは削除されませんでした",
     "Invalid log cleanup setting": "ログクリーンアップ設定が無効です",
     "Log retention must be between 1 and 36500 days": "ログ保持日数は 1～36500 日で指定してください",
-    "Body": "本文"
+    "Body": "本文",
+    "CORS rules": "CORS ルール",
+    "Cross-origin requests": "クロスオリジンリクエスト",
+    "Invalid CORS rules": "CORS ルールが無効です",
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "最も長い path_prefix が優先されます。allow_origins と allow_headers に許可リストを設定します。* はすべて許可、[] はアクセス拒否です。オリジンはスキームとポートを含み、パスは含みません。クロスオリジン Cookie は有効になりません。"
   }
 }

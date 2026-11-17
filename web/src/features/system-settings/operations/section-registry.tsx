@@ -33,11 +33,24 @@ import {
   rebateSettingsValues,
 } from './arrival-rebate-settings'
 import { ArrivalSettingsSection } from './arrival-settings-section'
+import { CORSSection } from './cors-section'
+import { DEFAULT_CORS_RULES } from './cors-settings'
 import { ErrorRewriteSection } from './error-rewrite-section'
 import { LogCleanupSection } from './log-cleanup-section'
 import { RebateSettingsSection } from './rebate-settings-section'
 
 const OPERATIONS_SECTIONS = [
+  {
+    id: 'cors',
+    titleKey: 'Cross-origin requests',
+    build: (settings: OperationsSettings) => (
+      <CORSSection
+        defaultValues={{
+          rules: settings['cors_setting.rules'] ?? DEFAULT_CORS_RULES,
+        }}
+      />
+    ),
+  },
   {
     id: 'hot-restart',
     titleKey: 'Linux graceful hot restart',

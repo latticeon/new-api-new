@@ -367,6 +367,7 @@ export type BillingSettings = {
 }
 
 export type OperationsSettings = {
+  'cors_setting.rules': string
   'maintenance_setting.enabled': boolean
   'maintenance_setting.message': string
   'log_setting.auto_cleanup_enabled': boolean

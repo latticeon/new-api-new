@@ -21,6 +21,7 @@ import { useStatus } from '@/hooks/use-status'
 import { SettingsPage } from '../components/settings-page'
 import type { OperationsSettings } from '../types'
 import { ARRIVAL_REBATE_DEFAULT_OPTIONS } from './arrival-rebate-settings'
+import { DEFAULT_CORS_RULES } from './cors-settings'
 import {
   OPERATIONS_DEFAULT_SECTION,
   getOperationsSectionContent,
@@ -29,6 +30,7 @@ import {
 
 const defaultOperationsSettings: OperationsSettings = {
   ...ARRIVAL_REBATE_DEFAULT_OPTIONS,
+  'cors_setting.rules': DEFAULT_CORS_RULES,
   'log_setting.auto_cleanup_enabled': false,
   'log_setting.cleanup_retention_days': 30,
   'log_setting.cleanup_scope': 'consume_error',

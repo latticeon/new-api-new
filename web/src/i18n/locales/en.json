@@ -7923,6 +7923,10 @@
     "No log rows were deleted": "No log rows were deleted",
     "Invalid log cleanup setting": "Invalid log cleanup setting",
     "Log retention must be between 1 and 36500 days": "Log retention must be between 1 and 36500 days",
-    "Body": "Body"
+    "Body": "Body",
+    "CORS rules": "CORS rules",
+    "Cross-origin requests": "Cross-origin requests",
+    "Invalid CORS rules": "Invalid CORS rules",
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled."
   }
 }
