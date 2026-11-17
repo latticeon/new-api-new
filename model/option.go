@@ -295,6 +295,10 @@ func validateOptionValue(key string, value string) error {
 			return common.NewMessage("Invalid parameters")
 		}
 	}
+	if key == operation_setting.ClientSourceAliasesOption {
+		_, err := operation_setting.ParseClientSourceAliases(value)
+		return err
+	}
 	return nil
 }
 

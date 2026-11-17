@@ -200,6 +200,10 @@ export type RequestPluginAdminStep = {
 }
 
 export interface LogOtherData {
+  /** Original request User-Agent, retained independently of display aliases. */
+  user_agent?: string
+  /** Current server-side display alias, derived when logs are read. */
+  client_source?: string
   admin_info?: {
     request_policy?: PolicyEvent[]
     request_plugins?: RequestPluginAdminStep[]
@@ -262,7 +266,6 @@ export interface LogOtherData {
   }
   // Login audit fields (type=7); visible to the log owner
   login_method?: string
-  user_agent?: string
   request_path?: string
   request_conversion?: string[]
   ws?: boolean

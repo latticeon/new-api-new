@@ -7927,6 +7927,12 @@
     "CORS rules": "Règles CORS",
     "Cross-origin requests": "Requêtes inter-origines",
     "Invalid CORS rules": "Règles CORS invalides",
-    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Le path_prefix le plus long est prioritaire. Définissez les listes autorisées avec allow_origins et allow_headers ; * autorise toute valeur, [] refuse l’accès. Les origines incluent le protocole et le port, sans chemin. Les cookies inter-origines ne sont pas activés."
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Le path_prefix le plus long est prioritaire. Définissez les listes autorisées avec allow_origins et allow_headers ; * autorise toute valeur, [] refuse l’accès. Les origines incluent le protocole et le port, sans chemin. Les cookies inter-origines ne sont pas activés.",
+    "Call source": "Source de l’appel",
+    "Invalid User-Agent aliases": "Alias User-Agent invalides",
+    "Match User-Agent by case-insensitive substring in order. The first match sets the display alias. Use [] for no aliases. Raw User-Agent is retained; aliases do not verify client identity.": "Les sous-chaînes du User-Agent sont comparées dans l’ordre, sans tenir compte de la casse. La première correspondance définit l’alias affiché. Utilisez [] pour ne définir aucun alias. Le User-Agent d’origine est conservé ; les alias ne vérifient pas l’identité du client.",
+    "Up to 100 aliases, with pattern up to 256 bytes and alias up to 128 bytes.": "Jusqu’à 100 alias, avec un motif de 256 octets et un alias de 128 octets maximum.",
+    "User-Agent": "User-Agent",
+    "User-Agent aliases": "Alias User-Agent"
   }
 }

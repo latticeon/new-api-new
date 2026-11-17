@@ -50,6 +50,8 @@ export function getLogCsvHeader(isAdmin: boolean, t: Translate): string[] {
     t('Duration'),
     t('IP'),
     t('Request ID'),
+    t('Call source'),
+    t('User-Agent'),
     t('Details'),
   ]
 }
@@ -90,6 +92,8 @@ export function getLogCsvRow(
     isTimingLogType(log.type) ? `${log.use_time ?? 0}s` : '',
     log.ip ?? '',
     log.request_id ?? '',
+    other?.user_agent ? other.client_source || other.user_agent : '',
+    other?.user_agent || '',
     renderLogContent(other, t) ?? log.content ?? '',
   ]
 }

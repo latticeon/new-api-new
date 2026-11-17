@@ -31,6 +31,7 @@ import {
 const defaultOperationsSettings: OperationsSettings = {
   ...ARRIVAL_REBATE_DEFAULT_OPTIONS,
   'cors_setting.rules': DEFAULT_CORS_RULES,
+  'client_source_setting.aliases': '[]',
   'log_setting.auto_cleanup_enabled': false,
   'log_setting.cleanup_retention_days': 30,
   'log_setting.cleanup_scope': 'consume_error',

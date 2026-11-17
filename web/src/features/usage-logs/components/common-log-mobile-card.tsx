@@ -51,6 +51,7 @@ type FieldName =
   | 'token'
   | 'group'
   | 'time'
+  | 'source'
 type LogField = {
   label: string
   value: string
@@ -78,6 +79,11 @@ export function CommonLogMobileCard<TData>(props: {
       ? other.user_group_ratio
       : other?.group_ratio
   const fields: Record<FieldName, LogField> = {
+    source: {
+      label: t('Call source'),
+      value: other?.client_source || other?.user_agent || '',
+      visible: props.cells.has('client_source') && !!other?.user_agent,
+    },
     model: {
       label: t('Model'),
       value: model.name,
@@ -123,7 +129,7 @@ export function CommonLogMobileCard<TData>(props: {
     selected?.visible && (!selected.sensitive || context.sensitiveVisible)
       ? selected
       : undefined
-  const metadata: FieldName[] = ['user', 'channel', 'token', 'group']
+  const metadata: FieldName[] = ['user', 'channel', 'token', 'group', 'source']
   const visibleMetadata = metadata.filter((id) => fields[id].visible)
   const costCell = props.cells.get('quota')
   const contentCell = props.cells.get('content')
@@ -263,7 +269,7 @@ export function CommonLogMobileCard<TData>(props: {
                     field.label
                   )}
                 </span>
-                {context.sensitiveVisible ? (
+                {!field.sensitive || context.sensitiveVisible ? (
                   <Button
                     variant='ghost'
                     aria-label={`${field.label}: ${field.value}`}
@@ -338,7 +344,11 @@ export function CommonLogMobileCard<TData>(props: {
         footer={
           activeField && (
             <CopyButton
-              value={activeField.value}
+              value={
+                selectedField === 'source'
+                  ? other?.user_agent || activeField.value
+                  : activeField.value
+              }
               variant='default'
               size='default'
               className='min-h-11 w-full'
@@ -353,6 +363,14 @@ export function CommonLogMobileCard<TData>(props: {
             <p className='bg-muted rounded-lg p-4 text-base [overflow-wrap:anywhere] whitespace-pre-wrap'>
               {activeField.value}
             </p>
+            {selectedField === 'source' && other?.user_agent && (
+              <div className='space-y-2'>
+                <p className='text-muted-foreground'>{t('User-Agent')}</p>
+                <p className='text-base [overflow-wrap:anywhere] whitespace-pre-wrap'>
+                  {other.user_agent}
+                </p>
+              </div>
+            )}
             {selectedField === 'model' && model.responseModel && (
               <ResponseModelDetails observation={model.responseModel} />
             )}

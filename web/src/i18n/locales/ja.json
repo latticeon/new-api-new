@@ -7927,6 +7927,12 @@
     "CORS rules": "CORS ルール",
     "Cross-origin requests": "クロスオリジンリクエスト",
     "Invalid CORS rules": "CORS ルールが無効です",
-    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "最も長い path_prefix が優先されます。allow_origins と allow_headers に許可リストを設定します。* はすべて許可、[] はアクセス拒否です。オリジンはスキームとポートを含み、パスは含みません。クロスオリジン Cookie は有効になりません。"
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "最も長い path_prefix が優先されます。allow_origins と allow_headers に許可リストを設定します。* はすべて許可、[] はアクセス拒否です。オリジンはスキームとポートを含み、パスは含みません。クロスオリジン Cookie は有効になりません。",
+    "Call source": "呼び出し元",
+    "Invalid User-Agent aliases": "User-Agent の別名設定が無効です",
+    "Match User-Agent by case-insensitive substring in order. The first match sets the display alias. Use [] for no aliases. Raw User-Agent is retained; aliases do not verify client identity.": "User-Agent の部分文字列を大文字・小文字を区別せずに上から順に照合し、最初に一致した別名を表示します。別名を設定しない場合は [] を指定してください。元の User-Agent は保持されます。別名ではクライアントの身元を確認できません。",
+    "Up to 100 aliases, with pattern up to 256 bytes and alias up to 128 bytes.": "別名は最大 100 件、照合文字列は最大 256 バイト、別名は最大 128 バイトです。",
+    "User-Agent": "User-Agent",
+    "User-Agent aliases": "User-Agent の別名"
   }
 }

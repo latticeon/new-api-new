@@ -361,3 +361,34 @@ it('does not infer mobile reasoning or body when the log has no recorded split',
   expect(screen.queryByText(/^Reasoning:/)).not.toBeInTheDocument()
   expect(screen.queryByText(/^Body:/)).not.toBeInTheDocument()
 })
+
+it('shows a concise call source and reveals and copies raw User-Agent on tap', async () => {
+  const user = userEvent.setup()
+  const raw = 'CherryStudio/1.0 (Desktop; long original client metadata)'
+  const copy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
+  renderLogs({
+    logs: [
+      {
+        ...log,
+        other: JSON.stringify({
+          user_agent: raw,
+          client_source: 'Cherry Studio',
+        }),
+      },
+    ],
+  })
+  await user.click(
+    screen.getByRole('button', { name: 'Call source: Cherry Studio' })
+  )
+  const dialog = await screen.findByRole('dialog', { name: 'Call source' })
+  expect(within(dialog).getByText(raw)).toBeVisible()
+  await user.click(
+    within(dialog).getByRole('button', { name: 'Copy to clipboard' })
+  )
+  expect(copy).toHaveBeenCalledWith(raw)
+})
+
+it('does not invent a call source for historical logs without User-Agent', () => {
+  renderLogs()
+  expect(screen.queryByText('Call source')).not.toBeInTheDocument()
+})

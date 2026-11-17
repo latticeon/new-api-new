@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -73,6 +75,16 @@ func (o *LogOther) SetPublic(key string, value any) bool {
 func (o *LogOther) MergePublic(values map[string]any) {
 	for key, value := range values {
 		o.SetPublic(key, value)
+	}
+}
+
+// recordClientSource stores only the actual User-Agent, never a custom source
+// header or a derived alias. Empty requests leave historical metadata unknown.
+func (o *LogOther) recordClientSource(c *gin.Context) {
+	if c != nil && c.Request != nil {
+		if userAgent := c.Request.UserAgent(); userAgent != "" {
+			o.SetPublic("user_agent", userAgent)
+		}
 	}
 }
 
@@ -263,6 +275,15 @@ func formatLogOtherJSON(value string, visibility logOtherVisibility) string {
 				delete(values, logOtherRootInfoKey)
 				changed = true
 			}
+		}
+	}
+
+	var userAgent string
+	if raw, exists := values["user_agent"]; exists && common.Unmarshal(raw, &userAgent) == nil && userAgent != "" {
+		label, err := common.Marshal(operation_setting.ClientSourceLabel(userAgent))
+		if err == nil && string(values["client_source"]) != string(label) {
+			values["client_source"] = label
+			changed = true
 		}
 	}
 

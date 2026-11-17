@@ -7927,6 +7927,12 @@
     "CORS rules": "跨域規則",
     "Cross-origin requests": "跨域請求",
     "Invalid CORS rules": "跨域規則無效",
-    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "依最長的 path_prefix 比對。透過 allow_origins 和 allow_headers 設定允許的來源與請求標頭；* 表示允許任意值，[] 表示拒絕存取。來源包含通訊協定和連接埠，不包含路徑。不啟用跨域 Cookie。"
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "依最長的 path_prefix 比對。透過 allow_origins 和 allow_headers 設定允許的來源與請求標頭；* 表示允許任意值，[] 表示拒絕存取。來源包含通訊協定和連接埠，不包含路徑。不啟用跨域 Cookie。",
+    "Call source": "呼叫來源",
+    "Invalid User-Agent aliases": "User-Agent 別名設定無效",
+    "Match User-Agent by case-insensitive substring in order. The first match sets the display alias. Use [] for no aliases. Raw User-Agent is retained; aliases do not verify client identity.": "依序比對 User-Agent 中的子字串，不區分大小寫，第一個符合項目決定顯示別名。使用 [] 表示不設定別名。原始 User-Agent 會保留；別名不能用於驗證用戶端身分。",
+    "Up to 100 aliases, with pattern up to 256 bytes and alias up to 128 bytes.": "最多設定 100 條別名，比對內容不超過 256 位元組，別名不超過 128 位元組。",
+    "User-Agent": "User-Agent",
+    "User-Agent aliases": "User-Agent 別名"
   }
 }

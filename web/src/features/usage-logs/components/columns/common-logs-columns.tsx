@@ -680,6 +680,30 @@ export function useCommonLogsColumns(
     })
     columns.push(
       {
+        id: 'client_source',
+        header: t('Call source'),
+        size: 150,
+        cell: ({ row }) => {
+          const other = parseLogOther(row.original.other)
+          const userAgent = other?.user_agent
+          if (!userAgent) {
+            return <span className='text-muted-foreground'>-</span>
+          }
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger className='block max-w-40 truncate text-left'>
+                  {other.client_source || userAgent}
+                </TooltipTrigger>
+                <TooltipContent className='[overflow-wrap:anywhere] whitespace-pre-wrap'>
+                  {userAgent}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )
+        },
+      },
+      {
         accessorKey: 'model_name',
         header: t('Model'),
         cell: function ModelCell({ row }) {

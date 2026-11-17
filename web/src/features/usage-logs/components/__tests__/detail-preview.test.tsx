@@ -23,6 +23,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createInstance } from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 import { afterAll, afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -577,3 +578,24 @@ test('recorded token labels and number formatting update when the viewer changes
   expect(screen.getByText('Denken: 1.200')).toBeVisible()
   expect(screen.getByText('Text: 300')).toBeVisible()
 })
+
+test.each([false, true])(
+  'desktop call source shows the alias and raw UA for admin=%s',
+  async (isAdmin) => {
+    const user = userEvent.setup()
+    const raw = 'CherryStudio/1.0 (Desktop; original client metadata)'
+    render(
+      <I18nextProvider i18n={i18n}>
+        <DetailPreview
+          other={{ user_agent: raw, client_source: 'Cherry Studio' }}
+          isAdmin={isAdmin}
+          columnId='client_source'
+        />
+      </I18nextProvider>
+    )
+    const source = screen.getByRole('button', { name: 'Cherry Studio' })
+    expect(source).toBeVisible()
+    await user.hover(source)
+    expect(await screen.findByText(raw)).toBeVisible()
+  }
+)

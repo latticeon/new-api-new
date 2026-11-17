@@ -7927,6 +7927,12 @@
     "CORS rules": "Правила CORS",
     "Cross-origin requests": "Межсайтовые запросы",
     "Invalid CORS rules": "Недопустимые правила CORS",
-    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Приоритет имеет самый длинный path_prefix. Задайте списки разрешённых источников и заголовков в allow_origins и allow_headers; * разрешает любые значения, [] запрещает доступ. Источник включает схему и порт, но не путь. Межсайтовые cookie не включаются."
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Приоритет имеет самый длинный path_prefix. Задайте списки разрешённых источников и заголовков в allow_origins и allow_headers; * разрешает любые значения, [] запрещает доступ. Источник включает схему и порт, но не путь. Межсайтовые cookie не включаются.",
+    "Call source": "Источник вызова",
+    "Invalid User-Agent aliases": "Недопустимые псевдонимы User-Agent",
+    "Match User-Agent by case-insensitive substring in order. The first match sets the display alias. Use [] for no aliases. Raw User-Agent is retained; aliases do not verify client identity.": "Подстроки User-Agent проверяются по порядку без учёта регистра. Первое совпадение задаёт отображаемый псевдоним. Используйте [], чтобы не задавать псевдонимы. Исходный User-Agent сохраняется; псевдонимы не подтверждают личность клиента.",
+    "Up to 100 aliases, with pattern up to 256 bytes and alias up to 128 bytes.": "До 100 правил: строка поиска — не более 256 байт, псевдоним — не более 128 байт.",
+    "User-Agent": "User-Agent",
+    "User-Agent aliases": "Псевдонимы User-Agent"
   }
 }

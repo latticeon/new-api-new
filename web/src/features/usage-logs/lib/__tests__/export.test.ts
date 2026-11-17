@@ -112,6 +112,8 @@ describe('usage log CSV export', () => {
       '203.0.113.9',
       'req-1',
       '',
+      '',
+      '',
     ])
   })
 
@@ -155,6 +157,27 @@ describe('usage log CSV export', () => {
     expect(row.slice(1, 2)).toEqual(['充值'])
     expect(row.slice(5, 12)).toEqual(['', '', '', '', '', '', ''])
     expect(row.at(-1)).toBe('充值 $5')
+  })
+
+  test('exports the alias and complete raw User-Agent in separate columns', () => {
+    const t = (key: string) => key
+    const header = getLogCsvHeader(false, t)
+    const row = getLogCsvRow(
+      {
+        ...consumeLog,
+        other: JSON.stringify({
+          user_agent: 'CherryStudio/1.0 (Desktop)',
+          client_source: 'Cherry Studio',
+        }),
+      },
+      false,
+      t
+    )
+    expect(row[header.indexOf('Call source')]).toBe('Cherry Studio')
+    expect(row[header.indexOf('User-Agent')]).toBe('CherryStudio/1.0 (Desktop)')
+    const historical = getLogCsvRow(consumeLog, false, t)
+    expect(historical[header.indexOf('Call source')]).toBe('')
+    expect(historical[header.indexOf('User-Agent')]).toBe('')
   })
 
   test('cells are quoted and text that starts a formula stays text', () => {

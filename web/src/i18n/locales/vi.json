@@ -7927,6 +7927,12 @@
     "CORS rules": "Quy tắc CORS",
     "Cross-origin requests": "Yêu cầu khác nguồn",
     "Invalid CORS rules": "Quy tắc CORS không hợp lệ",
-    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Ưu tiên path_prefix dài nhất. Đặt danh sách cho phép bằng allow_origins và allow_headers; * cho phép mọi giá trị, [] từ chối truy cập. Nguồn gồm giao thức và cổng, không có đường dẫn. Cookie khác nguồn không được bật."
+    "The longest path_prefix wins. Set allow_origins and allow_headers to allowed lists; * allows any, and [] denies access. Origins include scheme and port, without a path. Cross-origin cookies are not enabled.": "Ưu tiên path_prefix dài nhất. Đặt danh sách cho phép bằng allow_origins và allow_headers; * cho phép mọi giá trị, [] từ chối truy cập. Nguồn gồm giao thức và cổng, không có đường dẫn. Cookie khác nguồn không được bật.",
+    "Call source": "Nguồn gọi",
+    "Invalid User-Agent aliases": "Bí danh User-Agent không hợp lệ",
+    "Match User-Agent by case-insensitive substring in order. The first match sets the display alias. Use [] for no aliases. Raw User-Agent is retained; aliases do not verify client identity.": "So khớp chuỗi con trong User-Agent theo thứ tự, không phân biệt chữ hoa và chữ thường. Kết quả khớp đầu tiên quyết định bí danh hiển thị. Dùng [] để không đặt bí danh. User-Agent gốc được giữ lại; bí danh không xác minh danh tính máy khách.",
+    "Up to 100 aliases, with pattern up to 256 bytes and alias up to 128 bytes.": "Tối đa 100 bí danh, với chuỗi so khớp tối đa 256 byte và bí danh tối đa 128 byte.",
+    "User-Agent": "User-Agent",
+    "User-Agent aliases": "Bí danh User-Agent"
   }
 }

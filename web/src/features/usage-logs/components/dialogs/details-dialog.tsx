@@ -721,6 +721,19 @@ export function DetailsDialog(props: DetailsDialogProps) {
               mono
             />
           )}
+          {other?.user_agent && (
+            <>
+              <DetailRow
+                label={t('Call source')}
+                value={other.client_source || other.user_agent}
+              />
+              <DetailRow
+                label={t('User-Agent')}
+                value={other.user_agent}
+                mono
+              />
+            </>
+          )}
 
           {props.isAdmin && props.log.channel > 0 && (
             <DetailRow

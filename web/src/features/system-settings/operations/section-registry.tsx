@@ -33,6 +33,7 @@ import {
   rebateSettingsValues,
 } from './arrival-rebate-settings'
 import { ArrivalSettingsSection } from './arrival-settings-section'
+import { ClientSourceSection } from './client-source-section'
 import { CORSSection } from './cors-section'
 import { DEFAULT_CORS_RULES } from './cors-settings'
 import { ErrorRewriteSection } from './error-rewrite-section'
@@ -40,6 +41,17 @@ import { LogCleanupSection } from './log-cleanup-section'
 import { RebateSettingsSection } from './rebate-settings-section'
 
 const OPERATIONS_SECTIONS = [
+  {
+    id: 'client-source',
+    titleKey: 'Call source',
+    build: (settings: OperationsSettings) => (
+      <ClientSourceSection
+        defaultValues={{
+          aliases: settings['client_source_setting.aliases'] ?? '[]',
+        }}
+      />
+    ),
+  },
   {
     id: 'cors',
     titleKey: 'Cross-origin requests',
