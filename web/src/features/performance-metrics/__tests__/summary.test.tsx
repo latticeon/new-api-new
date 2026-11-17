@@ -171,7 +171,7 @@ describe('server performance summaries', () => {
     expect(uptimeValues).not.toContain(50)
   })
 
-  it('labels simulated gaps while keeping measured incidents and weighted totals', async () => {
+  it('fills gaps without labeling them while keeping measured incidents and totals', async () => {
     useSystemConfigStore
       .getState()
       .setConfig({ modelSquareReferenceDataEnabled: true })
@@ -179,21 +179,20 @@ describe('server performance summaries', () => {
     expect(screen.getByText('99.01%')).toBeVisible()
     expect(screen.getByText('0.00%')).toBeVisible()
     expect(screen.getByText('1 incidents in the last 24 hours')).toBeVisible()
-    expect(screen.getAllByText('Reference estimate').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Reference estimate')).not.toBeInTheDocument()
+    expect(screen.queryByText(/≈/)).not.toBeInTheDocument()
     await waitFor(() => expect(chart).toHaveBeenCalled())
     const uptime = chart.mock.calls
       .map(([props]) => props.spec)
       .find((value) => value.data[0].id === 'uptime')
     const values = uptime?.data[0].values ?? []
     expect(values).toHaveLength(24)
-    expect(values.filter((value) => value.reference)).toHaveLength(23)
-    expect(values.find((value) => !value.reference)).toMatchObject({
-      uptime: 99.01,
+    expect(values.find((value) => value.uptime === 99.01)).toMatchObject({
       incidents: 1,
     })
     expect(
       values
-        .filter((value) => value.reference)
+        .filter((value) => value.uptime !== 99.01)
         .every((value) => value.incidents === 0)
     ).toBe(true)
   })

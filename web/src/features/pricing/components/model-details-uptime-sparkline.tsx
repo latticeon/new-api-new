@@ -118,7 +118,6 @@ export function UptimeSparkline(props: UptimeSparklineProps) {
             </TooltipTrigger>
             <TooltipContent side='top' className='font-mono text-xs'>
               <div className='font-medium'>{day.date}</div>
-              {day.reference && <div>{t('Reference estimate')}</div>}
               <div>{formatUptimePct(day.uptime_pct)}</div>
               {day.outage_minutes > 0 && (
                 <div className='text-muted-foreground'>

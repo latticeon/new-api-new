@@ -295,7 +295,7 @@ export function MonitoringSettingsSection({
                   </FormLabel>
                   <FormDescription>
                     {t(
-                      'Show labeled estimates only where performance samples are missing. Real measurements take priority; logs and billing are unchanged.'
+                      'Fill only missing performance samples with simulated values. Real measurements take priority; logs and billing are unchanged.'
                     )}
                   </FormDescription>
                 </SettingsSwitchContent>

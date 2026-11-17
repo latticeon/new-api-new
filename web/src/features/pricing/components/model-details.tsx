@@ -108,7 +108,6 @@ import { DynamicPricingBreakdown } from './dynamic-pricing-breakdown'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
 import { ModelDetailsApi } from './model-details-api'
 import { ModelDetailsPerformance } from './model-details-performance'
-import { ReferenceMetricsNotice } from './reference-metrics-notice'
 
 // ----------------------------------------------------------------------------
 // Local UI helpers
@@ -247,10 +246,8 @@ function OverviewMetric(props: {
   label: string
   value: React.ReactNode
   valueClassName?: string
-  reference?: boolean
 }) {
   const Icon = props.icon
-  const { t } = useTranslation()
 
   return (
     <div className='flex min-w-0 items-center gap-2 px-3 py-2'>
@@ -265,7 +262,6 @@ function OverviewMetric(props: {
             props.valueClassName
           )}
         >
-          {props.reference && <span title={t('Reference estimate')}>≈ </span>}
           {props.value}
         </div>
       </div>
@@ -281,7 +277,6 @@ function OverviewSummaryGrid(props: { model: PricingModel }) {
 
   return (
     <div className='flex flex-col gap-2'>
-      {metricsQuery.displayData?.hasReference && <ReferenceMetricsNotice />}
       <div className='bg-muted/20 grid overflow-hidden rounded-lg border sm:grid-cols-3 sm:divide-x'>
         <OverviewMetric
           icon={Timer}
@@ -295,7 +290,6 @@ function OverviewSummaryGrid(props: { model: PricingModel }) {
                   summary?.has_tps
                 )
           }
-          reference={summary?.reference_fields?.includes('avg_tps')}
         />
         <OverviewMetric
           icon={Timer}
@@ -304,13 +298,11 @@ function OverviewSummaryGrid(props: { model: PricingModel }) {
             summary?.avg_latency_ms ?? Number.NaN,
             Boolean(summary)
           )}
-          reference={summary?.reference_fields?.includes('avg_latency_ms')}
         />
         <OverviewMetric
           icon={HeartPulse}
           label={t('Success rate')}
           value={formatUptimePct(successRate)}
-          reference={summary?.reference_fields?.includes('success_rate')}
           valueClassName={getSuccessRateTextClass(successRate)}
         />
       </div>

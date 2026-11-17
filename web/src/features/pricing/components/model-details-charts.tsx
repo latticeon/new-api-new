@@ -107,7 +107,6 @@ export function LatencyTrendChart(props: {
       time: formatHourLabel(point.timestamp),
       group: point.group,
       ttft: point.ttft_ms,
-      reference: point.reference,
     }))
     return {
       type: 'line' as const,
@@ -130,8 +129,7 @@ export function LatencyTrendChart(props: {
           content: [
             {
               key: t('Average TTFT'),
-              value: (d: { ttft: number; reference?: boolean }) =>
-                `${d.reference ? `${t('Reference estimate')}: ` : ''}${Math.round(d.ttft)} ms`,
+              value: (d: { ttft: number }) => `${Math.round(d.ttft)} ms`,
             },
           ],
         },
@@ -209,7 +207,6 @@ export function UptimeTrendChart(props: {
       uptime: toUptimeChartValue(point.uptime_pct),
       incidents: point.incidents,
       outage: point.outage_minutes,
-      reference: point.reference,
     }))
     const data =
       rawData.length === 1
@@ -247,18 +244,15 @@ export function UptimeTrendChart(props: {
           content: [
             {
               key: t('Uptime'),
-              value: (d: { uptime: number; reference?: boolean }) =>
-                `${d.reference ? `${t('Reference estimate')}: ` : ''}${d.uptime.toFixed(2)}%`,
+              value: (d: { uptime: number }) => `${d.uptime.toFixed(2)}%`,
             },
             {
               key: t('Incidents'),
-              value: (d: { incidents: number; reference?: boolean }) =>
-                d.reference ? '—' : `${d.incidents}`,
+              value: (d: { incidents: number }) => `${d.incidents}`,
             },
             {
               key: t('Outage'),
-              value: (d: { outage: number; reference?: boolean }) =>
-                d.reference ? '—' : `${d.outage} ${t('minutes')}`,
+              value: (d: { outage: number }) => `${d.outage} ${t('minutes')}`,
             },
           ],
         },

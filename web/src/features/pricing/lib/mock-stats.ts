@@ -50,14 +50,12 @@ export type GroupPerformance = {
 }
 
 export type LatencyTimePoint = {
-  reference?: boolean
   timestamp: string
   group: string
   ttft_ms: number
 }
 
 export type UptimeDayPoint = {
-  reference?: boolean
   date: string
   uptime_pct: number
   incidents: number

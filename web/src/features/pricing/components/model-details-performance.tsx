@@ -36,14 +36,12 @@ import type { UptimeDayPoint } from '../lib/mock-stats'
 import {
   formatDisplayLatency,
   formatDisplayThroughput,
-  hasReference,
   type DisplayPoint,
   type DisplayGroup,
 } from '../lib/reference-metrics'
 import type { PricingModel } from '../types'
 import { LatencyTrendChart, UptimeTrendChart } from './model-details-charts'
 import { UptimeSparkline } from './model-details-uptime-sparkline'
-import { ReferenceMetricsNotice } from './reference-metrics-notice'
 
 function StatCard(props: {
   icon: React.ComponentType<{ className?: string }>
@@ -51,10 +49,8 @@ function StatCard(props: {
   value: React.ReactNode
   hint?: string
   valueClassName?: string
-  reference?: boolean
 }) {
   const Icon = props.icon
-  const { t } = useTranslation()
   return (
     <div className='bg-background flex flex-col gap-1 rounded-lg border p-3'>
       <span className='text-muted-foreground inline-flex items-center gap-1.5 text-[10px] font-medium tracking-wider uppercase'>
@@ -67,7 +63,6 @@ function StatCard(props: {
           props.valueClassName
         )}
       >
-        {props.reference && <span title={t('Reference estimate')}>≈ </span>}
         {props.value}
       </span>
       {props.hint && (
@@ -92,7 +87,6 @@ function toLatencySeries(series: DisplayPoint[]) {
       timestamp: new Date(point.ts * 1000).toISOString(),
       group: 'latency',
       ttft_ms: point.avg_ttft_ms,
-      reference: point.reference_fields?.includes('avg_ttft_ms'),
     }))
 }
 
@@ -106,7 +100,6 @@ function toUptimeSeries(series: DisplayPoint[]): UptimeDayPoint[] {
         ? 1
         : 0,
     outage_minutes: 0,
-    reference: point.reference_fields?.includes('success_rate'),
   }))
 }
 
@@ -121,7 +114,6 @@ function toGroupUptimeSeries(group: DisplayGroup): UptimeDayPoint[] {
           ? 1
           : 0,
       outage_minutes: 0,
-      reference: point.reference_fields?.includes('success_rate'),
     }
   })
 }
@@ -166,13 +158,10 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
     successHint = t('{{count}} incidents in the last 24 hours', {
       count: incidentCount,
     })
-  } else if (metricsQuery.displayData?.hasReference) {
-    successHint = t('Reference estimate')
   }
 
   return (
     <div className='flex flex-col gap-4'>
-      {metricsQuery.displayData?.hasReference && <ReferenceMetricsNotice />}
       <div className='grid grid-cols-1 gap-2 sm:grid-cols-3'>
         <StatCard
           icon={Timer}
@@ -183,20 +172,17 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
               ? t('Not applicable')
               : formatDisplayThroughput(avgTps, summary?.has_tps)
           }
-          reference={summary?.reference_fields?.includes('avg_tps')}
           hint={t('Sustained tokens per second')}
         />
         <StatCard
           icon={Timer}
           label={t('Average latency')}
           value={formatDisplayLatency(avgLatency, Boolean(summary))}
-          reference={summary?.reference_fields?.includes('avg_latency_ms')}
         />
         <StatCard
           icon={HeartPulse}
           label={t('Success rate')}
           value={formatUptimePct(successRate)}
-          reference={summary?.reference_fields?.includes('success_rate')}
           hint={successHint}
           valueClassName={getSuccessRateTextClass(successRate)}
         />
@@ -223,9 +209,6 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
               cell: (perf) => (
                 <div className='flex flex-wrap items-center gap-1'>
                   <GroupBadge group={perf.group} size='sm' />
-                  {(hasReference(perf) || perf.series.some(hasReference)) && (
-                    <ReferenceMetricsNotice compact />
-                  )}
                 </div>
               ),
             },
@@ -236,7 +219,6 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
               cellClassName: tableStyles.compactNumericCell,
               cell: (perf) => (
                 <span>
-                  {perf.reference_fields?.includes('avg_tps') && '≈ '}
                   {metricsQuery.displayData?.tokenMetricsApplicable === false &&
                   !perf.has_tps
                     ? t('Not applicable')
@@ -251,7 +233,6 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
               cellClassName: tableStyles.compactNumericCell,
               cell: (perf) => (
                 <span>
-                  {perf.reference_fields?.includes('avg_ttft_ms') && '≈ '}
                   {metricsQuery.displayData?.tokenMetricsApplicable === false &&
                   !perf.has_ttft
                     ? t('Not applicable')
@@ -265,10 +246,7 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
               className: tableStyles.compactHeaderCellRight,
               cellClassName: tableStyles.compactMutedNumericCell,
               cell: (perf) => (
-                <span>
-                  {perf.reference_fields?.includes('avg_latency_ms') && '≈ '}
-                  {formatDisplayLatency(perf.avg_latency_ms, true)}
-                </span>
+                <span>{formatDisplayLatency(perf.avg_latency_ms, true)}</span>
               ),
             },
             {

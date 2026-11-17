@@ -111,7 +111,6 @@ describe('model-square reference data', () => {
     expect(
       badge?.recent_success_series?.map((point) => point.success_rate)
     ).toEqual(result.series.map((point) => point.success_rate))
-    expect(result.hasReference).toBe(true)
     expect(
       result.series.every(
         (point) =>
@@ -150,18 +149,16 @@ describe('model-square reference data', () => {
       success_rate: 0,
       avg_latency_ms: 0,
       avg_tps: 0,
-      reference_fields: [],
     })
-    expect(result.series.find((point) => point.ts === end)).toMatchObject({
-      ...measuredPoint,
-      reference_fields: [],
-    })
+    expect(result.series.find((point) => point.ts === end)).toMatchObject(
+      measuredPoint
+    )
     expect(result.groups[0]).toMatchObject({
       success_rate: 0,
       avg_ttft_ms: 0,
       avg_tps: 0,
     })
-    expect(result.groups[1].reference_fields).toContain('success_rate')
+    expect(result.groups[1].success_rate).toBeGreaterThan(99)
     expect(result.series).toHaveLength(24)
     expect(real).toEqual(before)
     expect(projectModelMetrics(model, real, false).summary).toBe(real.summary)
@@ -186,8 +183,8 @@ describe('model-square reference data', () => {
     expect(result.summary).toMatchObject({
       success_rate: 0,
       avg_latency_ms: 4500,
-      reference_fields: ['avg_tps', 'avg_ttft_ms'],
     })
+    expect(result.summary?.avg_tps).toBeGreaterThan(0)
     expect(result.groups[0].avg_ttft_ms).toBeGreaterThan(0)
     expect(result.groups[0].avg_tps).toBeGreaterThan(0)
     const legacy = { ...measuredPoint, has_tps: undefined, has_ttft: undefined }
@@ -219,14 +216,13 @@ describe('model-square reference data', () => {
         (point) => point.avg_tps === 0 && point.avg_ttft_ms === 0
       )
     ).toBe(true)
-    expect(image.summary?.reference_fields).not.toContain('avg_tps')
+    expect(image.summary?.avg_tps).toBe(0)
     expect(
       projectModelMetrics({ ...model, enable_groups: [] }, empty, true)
     ).toMatchObject({
       summary: null,
       groups: [],
       series: [],
-      hasReference: false,
     })
   })
 
@@ -241,25 +237,24 @@ describe('model-square reference data', () => {
       'Performance metrics for the last 24 hours'
     )
     await waitFor(() => expect(get).toHaveBeenCalled())
-    expect(
-      within(cardMetrics).queryByText('Reference estimate')
-    ).not.toBeInTheDocument()
+    expect(within(cardMetrics).getByText('—s')).toBeVisible()
     act(() =>
       useSystemConfigStore
         .getState()
         .setConfig({ modelSquareReferenceDataEnabled: true })
     )
-    expect(await screen.findByText('Reference estimate')).toBeVisible()
-    expect(within(cardMetrics).queryByText('—s')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(within(cardMetrics).queryByText('—s')).not.toBeInTheDocument()
+    )
+    expect(screen.queryByText('Reference estimate')).not.toBeInTheDocument()
     act(() =>
       useSystemConfigStore
         .getState()
         .setConfig({ modelSquareReferenceDataEnabled: false })
     )
     await waitFor(() =>
-      expect(screen.queryByText('Reference estimate')).not.toBeInTheDocument()
+      expect(within(cardMetrics).getByText('—s')).toBeVisible()
     )
-    expect(within(cardMetrics).getByText('—s')).toBeVisible()
     get.mockResolvedValue({ data: { success: false, message: 'Unavailable' } })
     act(() => {
       client.removeQueries({ queryKey: ['perf-metrics-summary'] })
@@ -277,7 +272,7 @@ describe('model-square reference data', () => {
         ])?.status
       ).toBe('error')
     )
-    expect(screen.queryByText('Reference estimate')).not.toBeInTheDocument()
+    expect(within(cardMetrics).getByText('—s')).toBeVisible()
   })
 
   it('renders measured zero latency, throughput and failure rate instead of placeholders', () => {
@@ -306,7 +301,7 @@ describe('model-square reference data', () => {
       .mockResolvedValue({ data: { success: true, data: empty } })
     const hook = renderHook(() => useModelPerformance(model), { wrapper })
     await waitFor(() =>
-      expect(hook.result.current.displayData?.hasReference).toBe(true)
+      expect(hook.result.current.displayData?.groups).toHaveLength(2)
     )
     get.mockRejectedValue(new Error('Unavailable'))
     await act(async () => {
@@ -314,7 +309,6 @@ describe('model-square reference data', () => {
     })
     await waitFor(() => expect(hook.result.current.isError).toBe(true))
     expect(hook.result.current.displayData).toMatchObject({
-      hasReference: false,
       summary: null,
       groups: [],
       series: [],
@@ -339,7 +333,6 @@ describe('model-square reference data', () => {
         .getState()
         .setConfig({ modelSquareReferenceDataEnabled: true })
     )
-    expect(hook.result.current.displayData?.hasReference).toBe(true)
     expect(hook.result.current.displayData?.groups).toHaveLength(2)
     expect(
       client.getQueryData<PerformanceMetricsData>([

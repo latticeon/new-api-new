@@ -43,20 +43,17 @@ export type DisplayMetrics = {
   summary?: (PerformanceSummary & ReferenceProvenance) | null
   series: DisplayPoint[]
   groups: DisplayGroup[]
-  hasReference: boolean
   tokenMetricsApplicable: boolean
 }
 export type DisplayBadgeMetrics = Omit<
   PerfModelSummary,
   'model_name' | 'recent_success_series'
-> &
-  ReferenceProvenance & {
-    window_start?: number
-    window_end?: number
-    recent_success_series?: (SuccessRatePoint & { reference?: boolean })[]
-    hasReference?: boolean
-    tokenMetricsApplicable?: boolean
-  }
+> & {
+  window_start?: number
+  window_end?: number
+  recent_success_series?: SuccessRatePoint[]
+  tokenMetricsApplicable?: boolean
+}
 
 type Profile = { ttft: number; tps: number; latency: number; tokens: boolean }
 
@@ -103,10 +100,6 @@ function referenceProfile(model: PricingModel): Profile {
     return { ttft: 950, tps: 48, latency: 0, tokens: true }
   }
   return { ttft: 620, tps: 76, latency: 0, tokens: true }
-}
-
-export function hasReference(values: ReferenceProvenance): boolean {
-  return Boolean(values.reference_fields?.length)
 }
 
 export function formatDisplayLatency(value: number, sampled = false): string {
@@ -221,7 +214,6 @@ export function projectModelMetrics(
     return {
       ...real,
       series: real.series ?? [],
-      hasReference: false,
       tokenMetricsApplicable: true,
     }
   }
@@ -266,12 +258,6 @@ export function projectModelMetrics(
     summary,
     series,
     groups: projectedGroups,
-    hasReference:
-      Boolean(summary && hasReference(summary)) ||
-      series.some(hasReference) ||
-      projectedGroups.some(
-        (group) => hasReference(group) || group.series.some(hasReference)
-      ),
     tokenMetricsApplicable: tokens,
   }
 }
@@ -312,11 +298,7 @@ export function projectModelBadge(
     ...existing,
     ...reference.series
       .filter((point) => !occupied.has(Math.floor(point.ts / 3600)))
-      .map((point) => ({
-        ts: point.ts,
-        success_rate: point.success_rate,
-        reference: true,
-      })),
+      .map((point) => ({ ts: point.ts, success_rate: point.success_rate })),
   ]
     .sort((a, b) => a.ts - b.ts)
     .slice(-24)
@@ -324,8 +306,6 @@ export function projectModelBadge(
     ...real,
     ...summary,
     recent_success_series: series,
-    hasReference:
-      hasReference(summary) || series.some((point) => point.reference),
     tokenMetricsApplicable: reference.tokenMetricsApplicable,
   }
 }
