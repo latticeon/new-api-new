@@ -19,22 +19,17 @@ For commercial licensing, please contact support@quantumnous.com
 import { memo, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import {
-  formatLatency,
-  formatThroughput,
-  getSuccessRateDotClass,
-} from '@/features/performance-metrics/lib/format'
-import type { SuccessRatePoint } from '@/features/performance-metrics/types'
+import { getSuccessRateDotClass } from '@/features/performance-metrics/lib/format'
 import { cn } from '@/lib/utils'
 
-export type ModelPerfBadgeData = {
-  window_start?: number
-  window_end?: number
-  avg_latency_ms: number
-  success_rate: number
-  avg_tps: number
-  recent_success_series?: SuccessRatePoint[]
-}
+import {
+  formatDisplayLatency,
+  formatDisplayThroughput,
+  type DisplayBadgeMetrics,
+} from '../lib/reference-metrics'
+import { ReferenceMetricsNotice } from './reference-metrics-notice'
+
+export type ModelPerfBadgeData = DisplayBadgeMetrics
 
 export interface ModelPerfBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   perf: ModelPerfBadgeData | undefined
@@ -46,11 +41,18 @@ export const ModelPerfBadge = memo(function ModelPerfBadge(
   props: ModelPerfBadgeProps
 ) {
   const { t } = useTranslation()
-  const latencyText = formatLatency(props.perf?.avg_latency_ms ?? 0)
-  const throughputText = formatThroughput(props.perf?.avg_tps ?? 0).replace(
-    ' t/s',
-    't/s'
+  const latencyText = formatDisplayLatency(
+    props.perf?.avg_latency_ms ?? Number.NaN,
+    Boolean(props.perf)
   )
+  const throughputText = formatDisplayThroughput(
+    props.perf?.avg_tps ?? Number.NaN,
+    props.perf?.has_tps
+  ).replace(' t/s', 't/s')
+  let displayedThroughput = throughputText === '—' ? '—t/s' : throughputText
+  if (props.perf?.tokenMetricsApplicable === false && !props.perf.has_tps) {
+    displayedThroughput = t('Not applicable')
+  }
   const successRate = props.perf?.success_rate
   const hasSuccessRate =
     successRate != null &&
@@ -80,10 +82,15 @@ export const ModelPerfBadge = memo(function ModelPerfBadge(
     <div
       aria-label={t('Performance metrics for the last 24 hours')}
       className={cn(
-        'flex w-full min-w-0 items-center justify-between gap-3',
+        'flex w-full min-w-0 flex-wrap items-center justify-between gap-3',
         props.className
       )}
     >
+      {props.perf?.hasReference && (
+        <div className='w-full'>
+          <ReferenceMetricsNotice compact />
+        </div>
+      )}
       <dl className='flex min-w-0 items-start gap-5 text-xs tabular-nums'>
         <div className='w-24 shrink-0'>
           <dt
@@ -94,6 +101,7 @@ export const ModelPerfBadge = memo(function ModelPerfBadge(
           >
             <span>{t('Status')}</span>
             <span className='font-mono'>
+              {props.perf?.reference_fields?.includes('success_rate') && '≈ '}
               {hasSuccessRate ? `${successRate.toFixed(2)}%` : '—'}
             </span>
           </dt>
@@ -107,10 +115,16 @@ export const ModelPerfBadge = memo(function ModelPerfBadge(
               statusSamples.map((sample) => (
                 <span
                   key={sample.ts}
+                  title={
+                    sample.reference
+                      ? t('Reference estimate')
+                      : t('Measured data')
+                  }
                   aria-hidden
                   className={cn(
                     'h-full w-[3px] shrink-0 rounded-xs',
-                    getSuccessRateDotClass(sample.success_rate)
+                    getSuccessRateDotClass(sample.success_rate),
+                    sample.reference && 'opacity-60'
                   )}
                 />
               ))
@@ -124,6 +138,7 @@ export const ModelPerfBadge = memo(function ModelPerfBadge(
             {t('Latency short')}
           </dt>
           <dd className='mt-1 font-mono whitespace-nowrap'>
+            {props.perf?.reference_fields?.includes('avg_latency_ms') && '≈ '}
             {latencyText === '—' ? '—s' : latencyText}
           </dd>
         </div>
@@ -132,7 +147,8 @@ export const ModelPerfBadge = memo(function ModelPerfBadge(
             {t('Throughput short')}
           </dt>
           <dd className='mt-1 font-mono whitespace-nowrap'>
-            {throughputText === '—' ? '—t/s' : throughputText}
+            {props.perf?.reference_fields?.includes('avg_tps') && '≈ '}
+            {displayedThroughput}
           </dd>
         </div>
       </dl>

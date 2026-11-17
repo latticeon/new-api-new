@@ -248,23 +248,31 @@ func TestPerformanceAggregationAndFlush(t *testing.T) {
 			before, err := Query(QueryParams{Model: "test-model", Hours: 24, AllowedGroups: groups})
 			require.NoError(t, err)
 			require.NotNil(t, before.Summary)
-			assert.Equal(t, Summary{SuccessRate: 99.01, AvgLatencyMs: 1009, AvgTps: 5}, *before.Summary)
+			assert.Equal(t, Summary{SuccessRate: 99.01, AvgLatencyMs: 1009, AvgTps: 5, HasTps: true}, *before.Summary)
 			assert.Equal(t, start, before.WindowStart)
 			require.Len(t, before.Series, 1)
 			assert.Equal(t, hour, before.Series[0].Ts)
 			assert.InDelta(t, 99.01, before.Series[0].SuccessRate, 0.01)
 			require.Len(t, before.Groups, 2)
+			assert.True(t, before.Series[0].HasTtft)
+			assert.True(t, before.Series[0].HasTps)
+			assert.True(t, before.Groups[0].HasTtft)
+			assert.True(t, before.Groups[0].HasTps)
+			assert.False(t, before.Groups[1].HasTtft)
+			assert.False(t, before.Groups[1].HasTps)
 
 			summary, err := QuerySummaryAll(24, groups)
 			require.NoError(t, err)
 			assert.Equal(t, before.Summary, summary.Summary)
 			require.Len(t, summary.Models, 1)
 			assert.Equal(t, 99.01, summary.Models[0].SuccessRate)
+			assert.True(t, summary.Models[0].HasTps)
 			assert.Equal(t, 99.01, summary.Models[0].RecentSuccessSeries[0].SuccessRate)
 			encoded, err := common.Marshal(summary)
 			require.NoError(t, err)
 			assert.NotContains(t, string(encoded), "request_count")
 			assert.NotContains(t, string(encoded), "success_count")
+			assert.Contains(t, string(encoded), `"has_tps":true`)
 
 			flushCompletedBuckets()
 			flushCompletedBuckets()
@@ -290,6 +298,7 @@ func TestPerformanceAggregationAndFlush(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, 98.04, combined.Summary.SuccessRate)
 			assert.Equal(t, 99.01, combined.Models[0].SuccessRate)
+			assert.False(t, combined.Models[1].HasTps)
 
 			t.Run("recent models are summarized over their status sample hours", func(t *testing.T) {
 				for i := range 26 {
@@ -345,6 +354,7 @@ func TestPerformanceAggregationAndFlush(t *testing.T) {
 				denied, err := QuerySummaryAll(24, []string{}, "history-model", "history-hidden")
 				require.NoError(t, err)
 				assert.Empty(t, denied.RecentSuccessSeries)
+				assert.Nil(t, denied.Summary)
 				flushCompletedBuckets()
 				persisted, err := QuerySummaryAll(24, groups, "history-model", "history-hot")
 				require.NoError(t, err)
@@ -377,4 +387,65 @@ func TestPerformanceAggregationAndFlush(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestPerformanceSampleAvailability(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		sample  Sample
+		hasTtft bool
+		hasTps  bool
+	}{
+		{name: "unsampled metrics", sample: Sample{Success: true}},
+		{name: "measured zero TTFT", sample: Sample{HasTtft: true}, hasTtft: true},
+		{name: "negative TTFT is unsampled", sample: Sample{HasTtft: true, TtftMs: -1}},
+		{name: "TPS measured", sample: Sample{OutputTokens: 10, GenerationMs: 2000}, hasTps: true},
+		{name: "tokens without duration", sample: Sample{OutputTokens: 10}},
+		{name: "duration without tokens", sample: Sample{GenerationMs: 2000}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bucket := &atomicBucket{}
+			bucket.add(tc.sample)
+			result := buildQueryResult("model", map[bucketKey]counters{
+				{model: "model", group: "a", bucketTs: 3600}: bucket.snapshot(),
+			})
+			require.NotNil(t, result.Summary)
+			require.Len(t, result.Groups, 1)
+			require.Len(t, result.Groups[0].Series, 1)
+			require.Len(t, result.Series, 1)
+			assert.Equal(t, tc.hasTtft, result.Groups[0].HasTtft)
+			assert.Equal(t, tc.hasTtft, result.Groups[0].Series[0].HasTtft)
+			assert.Equal(t, tc.hasTtft, result.Series[0].HasTtft)
+			assert.Equal(t, int64(0), result.Series[0].AvgTtftMs)
+			assert.Equal(t, tc.hasTps, result.Summary.HasTps)
+			assert.Equal(t, tc.hasTps, result.Groups[0].HasTps)
+			assert.Equal(t, tc.hasTps, result.Groups[0].Series[0].HasTps)
+			assert.Equal(t, tc.hasTps, result.Series[0].HasTps)
+
+			encoded, err := common.Marshal(result)
+			require.NoError(t, err)
+			var payload struct {
+				Summary map[string]any   `json:"summary"`
+				Series  []map[string]any `json:"series"`
+				Groups  []struct {
+					HasTtft bool `json:"has_ttft"`
+					HasTps  bool `json:"has_tps"`
+				} `json:"groups"`
+			}
+			require.NoError(t, common.Unmarshal(encoded, &payload))
+			assert.Equal(t, tc.hasTps, payload.Summary["has_tps"])
+			assert.Equal(t, tc.hasTtft, payload.Series[0]["has_ttft"])
+			assert.Equal(t, tc.hasTps, payload.Series[0]["has_tps"])
+			assert.Equal(t, tc.hasTtft, payload.Groups[0].HasTtft)
+			assert.Equal(t, tc.hasTps, payload.Groups[0].HasTps)
+			for _, field := range []string{"request_count", "success_count", "ttft_count", "output_tokens", "generation_ms"} {
+				assert.NotContains(t, string(encoded), `"`+field+`"`)
+			}
+		})
+	}
+
+	empty := buildQueryResult("missing", nil)
+	assert.Nil(t, empty.Summary)
+	assert.Empty(t, empty.Series)
+	assert.Empty(t, empty.Groups)
 }

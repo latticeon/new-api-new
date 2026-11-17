@@ -57,6 +57,7 @@ import { safeNumberFieldProps } from '../utils/numeric-field'
 const monitoringSchema = z.object({
   perf_metrics_setting: z.object({
     enabled: z.boolean(),
+    reference_data_enabled: z.boolean(),
     flush_interval: z.coerce.number().min(1),
     bucket_time: z.enum(['minute', '5min', 'hour']),
     retention_days: z.coerce.number().min(0),
@@ -68,6 +69,7 @@ type MonitoringFormValues = z.output<typeof monitoringSchema>
 
 type FlatMonitoringDefaults = {
   'perf_metrics_setting.enabled': boolean
+  'perf_metrics_setting.reference_data_enabled': boolean
   'perf_metrics_setting.flush_interval': number
   'perf_metrics_setting.bucket_time': 'minute' | '5min' | 'hour'
   'perf_metrics_setting.retention_days': number
@@ -82,6 +84,8 @@ const buildFormDefaults = (
 ): MonitoringFormInput => ({
   perf_metrics_setting: {
     enabled: defaults['perf_metrics_setting.enabled'],
+    reference_data_enabled:
+      defaults['perf_metrics_setting.reference_data_enabled'],
     flush_interval: defaults['perf_metrics_setting.flush_interval'],
     bucket_time: defaults['perf_metrics_setting.bucket_time'],
     retention_days: defaults['perf_metrics_setting.retention_days'],
@@ -92,6 +96,8 @@ const normalizeDefaults = (
   defaults: MonitoringSettingsSectionProps['defaultValues']
 ): FlatMonitoringDefaults => ({
   'perf_metrics_setting.enabled': defaults['perf_metrics_setting.enabled'],
+  'perf_metrics_setting.reference_data_enabled':
+    defaults['perf_metrics_setting.reference_data_enabled'],
   'perf_metrics_setting.flush_interval':
     defaults['perf_metrics_setting.flush_interval'],
   'perf_metrics_setting.bucket_time':
@@ -104,6 +110,8 @@ const normalizeFormValues = (
   values: MonitoringFormValues
 ): FlatMonitoringDefaults => ({
   'perf_metrics_setting.enabled': values.perf_metrics_setting.enabled,
+  'perf_metrics_setting.reference_data_enabled':
+    values.perf_metrics_setting.reference_data_enabled,
   'perf_metrics_setting.flush_interval':
     values.perf_metrics_setting.flush_interval,
   'perf_metrics_setting.bucket_time': values.perf_metrics_setting.bucket_time,
@@ -276,6 +284,30 @@ export function MonitoringSettingsSection({
               )}
             />
           </div>
+          <FormField
+            control={form.control}
+            name='perf_metrics_setting.reference_data_enabled'
+            render={({ field }) => (
+              <SettingsSwitchItem>
+                <SettingsSwitchContent>
+                  <FormLabel>
+                    {t('Fill missing model-square metrics with reference data')}
+                  </FormLabel>
+                  <FormDescription>
+                    {t(
+                      'Show labeled estimates only where performance samples are missing. Real measurements take priority; logs and billing are unchanged.'
+                    )}
+                  </FormDescription>
+                </SettingsSwitchContent>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </SettingsSwitchItem>
+            )}
+          />
         </SettingsForm>
       </Form>
     </SettingsSection>

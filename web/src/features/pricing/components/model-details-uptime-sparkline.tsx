@@ -67,6 +67,7 @@ function heightFor(uptime: number): string {
 
 export function UptimeSparkline(props: UptimeSparklineProps) {
   const size = props.size ?? 'md'
+  const { t } = useTranslation()
   const showOverall = props.showOverall ?? true
 
   if (props.series.length === 0) {
@@ -90,7 +91,7 @@ export function UptimeSparkline(props: UptimeSparklineProps) {
       <div
         className={cn('flex items-end', containerHeight, gap)}
         role='img'
-        aria-label={`30 day uptime ${overall.toFixed(2)}%`}
+        aria-label={`${t('Success rate')} ${overall.toFixed(2)}%`}
       >
         {props.series.map((day) => (
           <Tooltip key={day.date}>
@@ -117,6 +118,7 @@ export function UptimeSparkline(props: UptimeSparklineProps) {
             </TooltipTrigger>
             <TooltipContent side='top' className='font-mono text-xs'>
               <div className='font-medium'>{day.date}</div>
+              {day.reference && <div>{t('Reference estimate')}</div>}
               <div>{formatUptimePct(day.uptime_pct)}</div>
               {day.outage_minutes > 0 && (
                 <div className='text-muted-foreground'>

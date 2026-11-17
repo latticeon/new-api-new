@@ -610,6 +610,7 @@ describe('model cards', () => {
           'perf-metrics-summary',
           24,
           ['example-model'],
+          false,
         ])?.status
       ).toBe('error')
     )

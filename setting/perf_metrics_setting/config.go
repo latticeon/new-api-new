@@ -3,17 +3,20 @@ package perf_metrics_setting
 import "github.com/QuantumNous/new-api/setting/config"
 
 type PerfMetricsSetting struct {
-	Enabled       bool   `json:"enabled"`
-	FlushInterval int    `json:"flush_interval"`
-	BucketTime    string `json:"bucket_time"`
-	RetentionDays int    `json:"retention_days"`
+	Enabled bool `json:"enabled"`
+	// ReferenceDataEnabled only controls model-square display, not sampling.
+	ReferenceDataEnabled bool   `json:"reference_data_enabled"`
+	FlushInterval        int    `json:"flush_interval"`
+	BucketTime           string `json:"bucket_time"`
+	RetentionDays        int    `json:"retention_days"`
 }
 
 var perfMetricsSetting = PerfMetricsSetting{
-	Enabled:       true,
-	FlushInterval: 5,
-	BucketTime:    "hour",
-	RetentionDays: 0,
+	Enabled:              true,
+	ReferenceDataEnabled: false,
+	FlushInterval:        5,
+	BucketTime:           "hour",
+	RetentionDays:        0,
 }
 
 func init() {

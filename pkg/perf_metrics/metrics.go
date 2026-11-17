@@ -329,6 +329,7 @@ func QuerySummaryAll(hours int, groups []string, recentModels ...string) (Summar
 			AvgLatencyMs:        avgLatency,
 			SuccessRate:         math.Round(successRate*100) / 100,
 			AvgTps:              math.Round(avgTps*100) / 100,
+			HasTps:              total.generationMs > 0 && total.outputTokens > 0,
 			RecentSuccessSeries: recentSuccessSeries(modelBuckets[name]),
 			RequestCount:        total.requestCount,
 		})
@@ -499,9 +500,11 @@ func buildQueryResult(modelName string, merged map[bucketKey]counters) QueryResu
 		results = append(results, GroupResult{
 			Group:        group,
 			AvgTtftMs:    avg(total.ttftSumMs, total.ttftCount),
+			HasTtft:      total.ttftCount > 0,
 			AvgLatencyMs: avg(total.totalLatencyMs, total.requestCount),
 			SuccessRate:  successRate(total),
 			AvgTps:       avgTps(total),
+			HasTps:       total.generationMs > 0 && total.outputTokens > 0,
 			Series:       series,
 		})
 	}
@@ -533,6 +536,7 @@ func summarize(total counters) *Summary {
 		AvgLatencyMs: avg(total.totalLatencyMs, total.requestCount),
 		SuccessRate:  math.Round(successRate(total)*100) / 100,
 		AvgTps:       math.Round(avgTps(total)*100) / 100,
+		HasTps:       total.generationMs > 0 && total.outputTokens > 0,
 	}
 }
 
@@ -540,9 +544,11 @@ func bucketPoint(ts int64, value counters) BucketPoint {
 	return BucketPoint{
 		Ts:           ts,
 		AvgTtftMs:    avg(value.ttftSumMs, value.ttftCount),
+		HasTtft:      value.ttftCount > 0,
 		AvgLatencyMs: avg(value.totalLatencyMs, value.requestCount),
 		SuccessRate:  successRate(value),
 		AvgTps:       avgTps(value),
+		HasTps:       value.generationMs > 0 && value.outputTokens > 0,
 	}
 }
 

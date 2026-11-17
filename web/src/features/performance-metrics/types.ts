@@ -17,12 +17,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 export type PerformanceSummary = {
+  has_tps?: boolean
   avg_latency_ms: number
   success_rate: number
   avg_tps: number
 }
 
 export type PerformanceSeriesPoint = {
+  has_tps?: boolean
+  has_ttft?: boolean
   ts: number
   avg_ttft_ms: number
   avg_latency_ms: number
@@ -32,6 +35,8 @@ export type PerformanceSeriesPoint = {
 
 export type PerformanceGroup = {
   group: string
+  has_tps?: boolean
+  has_ttft?: boolean
   avg_ttft_ms: number
   avg_latency_ms: number
   success_rate: number
@@ -59,6 +64,7 @@ export type PerfModelSummary = {
   model_name: string
   avg_latency_ms: number
   success_rate: number
+  has_tps?: boolean
   avg_tps: number
   recent_success_series?: SuccessRatePoint[]
   request_count?: number

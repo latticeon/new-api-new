@@ -17,6 +17,7 @@ import (
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/console_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/perf_metrics_setting"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 
 	"github.com/gin-gonic/gin"
@@ -99,10 +100,11 @@ func GetStatus(c *gin.Context) {
 		"stripe_unit_price": setting.StripeUnitPrice,
 
 		// 面板启用开关
-		"api_info_enabled":      cs.ApiInfoEnabled,
-		"uptime_kuma_enabled":   cs.UptimeKumaEnabled,
-		"announcements_enabled": cs.AnnouncementsEnabled,
-		"faq_enabled":           cs.FAQEnabled,
+		"api_info_enabled":                    cs.ApiInfoEnabled,
+		"uptime_kuma_enabled":                 cs.UptimeKumaEnabled,
+		"announcements_enabled":               cs.AnnouncementsEnabled,
+		"faq_enabled":                         cs.FAQEnabled,
+		"model_square_reference_data_enabled": perf_metrics_setting.GetSetting().ReferenceDataEnabled,
 
 		// 模块管理配置
 		"HeaderNavModules":    common.OptionMap["HeaderNavModules"],

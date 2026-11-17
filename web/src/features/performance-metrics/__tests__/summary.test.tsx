@@ -24,6 +24,7 @@ import { PerformanceOverview } from '@/features/dashboard/components/models/perf
 import { PerformanceHealthPanel } from '@/features/dashboard/components/overview/performance-health-panel'
 import { ModelDetailsPerformance } from '@/features/pricing/components/model-details-performance'
 import { UptimeSparkline } from '@/features/pricing/components/model-details-uptime-sparkline'
+import { useSystemConfigStore } from '@/stores/system-config-store'
 
 const chart = vi.hoisted(() =>
   vi.fn(
@@ -39,12 +40,20 @@ vi.mock('@visactor/vchart', () => ({
 
 let client: QueryClient
 beforeEach(() => {
+  useSystemConfigStore
+    .getState()
+    .setConfig({ modelSquareReferenceDataEnabled: false })
   chart.mockClear()
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
 })
-afterEach(() => client.clear())
+afterEach(() => {
+  client.clear()
+  useSystemConfigStore
+    .getState()
+    .setConfig({ modelSquareReferenceDataEnabled: false })
+})
 
 const summary = { success_rate: 99.01, avg_latency_ms: 1009, avg_tps: 5 }
 const windowStart = 1789387200
@@ -160,6 +169,33 @@ describe('server performance summaries', () => {
     const uptimeValues = uptime?.data[0].values.map((value) => value.uptime)
     expect(uptimeValues).toContain(99.01)
     expect(uptimeValues).not.toContain(50)
+  })
+
+  it('labels simulated gaps while keeping measured incidents and weighted totals', async () => {
+    useSystemConfigStore
+      .getState()
+      .setConfig({ modelSquareReferenceDataEnabled: true })
+    renderModelDetails()
+    expect(screen.getByText('99.01%')).toBeVisible()
+    expect(screen.getByText('0.00%')).toBeVisible()
+    expect(screen.getByText('1 incidents in the last 24 hours')).toBeVisible()
+    expect(screen.getAllByText('Reference estimate').length).toBeGreaterThan(0)
+    await waitFor(() => expect(chart).toHaveBeenCalled())
+    const uptime = chart.mock.calls
+      .map(([props]) => props.spec)
+      .find((value) => value.data[0].id === 'uptime')
+    const values = uptime?.data[0].values ?? []
+    expect(values).toHaveLength(24)
+    expect(values.filter((value) => value.reference)).toHaveLength(23)
+    expect(values.find((value) => !value.reference)).toMatchObject({
+      uptime: 99.01,
+      incidents: 1,
+    })
+    expect(
+      values
+        .filter((value) => value.reference)
+        .every((value) => value.incidents === 0)
+    ).toBe(true)
   })
 
   it('shows each group success rate in its own sparkline label', () => {

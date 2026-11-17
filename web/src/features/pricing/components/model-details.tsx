@@ -16,7 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
   ArrowLeft,
@@ -48,21 +47,18 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getPerfMetrics } from '@/features/performance-metrics/api'
 import {
-  formatLatency,
-  formatThroughput,
   formatUptimePct,
   getSuccessRateTextClass,
 } from '@/features/performance-metrics/lib/format'
 import { PluginIcon } from '@/features/task-plugins/components/plugin-icon'
 import { getLobeIcon } from '@/lib/lobe-icon'
-import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
 import { DEFAULT_TOKEN_UNIT } from '../constants'
 import { useBillingTime } from '../hooks/use-billing-time'
+import { useModelPerformance } from '../hooks/use-model-performance'
 import { usePricingData } from '../hooks/use-pricing-data'
 import type { ParsedTaskTier } from '../lib/billing-expr'
 import { formatBillingCondition } from '../lib/billing-expression/condition-display'
@@ -86,6 +82,10 @@ import {
 } from '../lib/plugin-pricing'
 import { formatFixedPrice, formatGroupPrice } from '../lib/price'
 import {
+  formatDisplayLatency,
+  formatDisplayThroughput,
+} from '../lib/reference-metrics'
+import {
   evaluateTaskUsageExamples,
   getTaskEnumFields,
   getTaskNumberFields,
@@ -108,6 +108,7 @@ import { DynamicPricingBreakdown } from './dynamic-pricing-breakdown'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
 import { ModelDetailsApi } from './model-details-api'
 import { ModelDetailsPerformance } from './model-details-performance'
+import { ReferenceMetricsNotice } from './reference-metrics-notice'
 
 // ----------------------------------------------------------------------------
 // Local UI helpers
@@ -246,8 +247,10 @@ function OverviewMetric(props: {
   label: string
   value: React.ReactNode
   valueClassName?: string
+  reference?: boolean
 }) {
   const Icon = props.icon
+  const { t } = useTranslation()
 
   return (
     <div className='flex min-w-0 items-center gap-2 px-3 py-2'>
@@ -262,6 +265,7 @@ function OverviewMetric(props: {
             props.valueClassName
           )}
         >
+          {props.reference && <span title={t('Reference estimate')}>≈ </span>}
           {props.value}
         </div>
       </div>
@@ -271,36 +275,45 @@ function OverviewMetric(props: {
 
 function OverviewSummaryGrid(props: { model: PricingModel }) {
   const { t } = useTranslation()
-  const metricsQuery = useQuery({
-    queryKey: ['perf-metrics', props.model.model_name],
-    queryFn: async () =>
-      requireServerSuccess(await getPerfMetrics(props.model.model_name, 24)),
-    staleTime: 60 * 1000,
-  })
-
-  const summary = metricsQuery.data?.data.summary
+  const metricsQuery = useModelPerformance(props.model)
+  const summary = metricsQuery.displayData?.summary
   const successRate = summary?.success_rate ?? Number.NaN
-  const avgTps = summary?.avg_tps ?? 0
-  const avgLatency = summary?.avg_latency_ms ?? 0
 
   return (
-    <div className='bg-muted/20 grid overflow-hidden rounded-lg border sm:grid-cols-3 sm:divide-x'>
-      <OverviewMetric
-        icon={Timer}
-        label='TPS'
-        value={formatThroughput(avgTps)}
-      />
-      <OverviewMetric
-        icon={Timer}
-        label={t('Average latency')}
-        value={formatLatency(avgLatency)}
-      />
-      <OverviewMetric
-        icon={HeartPulse}
-        label={t('Success rate')}
-        value={formatUptimePct(successRate)}
-        valueClassName={getSuccessRateTextClass(successRate)}
-      />
+    <div className='flex flex-col gap-2'>
+      {metricsQuery.displayData?.hasReference && <ReferenceMetricsNotice />}
+      <div className='bg-muted/20 grid overflow-hidden rounded-lg border sm:grid-cols-3 sm:divide-x'>
+        <OverviewMetric
+          icon={Timer}
+          label='TPS'
+          value={
+            metricsQuery.displayData?.tokenMetricsApplicable === false &&
+            !summary?.has_tps
+              ? t('Not applicable')
+              : formatDisplayThroughput(
+                  summary?.avg_tps ?? Number.NaN,
+                  summary?.has_tps
+                )
+          }
+          reference={summary?.reference_fields?.includes('avg_tps')}
+        />
+        <OverviewMetric
+          icon={Timer}
+          label={t('Average latency')}
+          value={formatDisplayLatency(
+            summary?.avg_latency_ms ?? Number.NaN,
+            Boolean(summary)
+          )}
+          reference={summary?.reference_fields?.includes('avg_latency_ms')}
+        />
+        <OverviewMetric
+          icon={HeartPulse}
+          label={t('Success rate')}
+          value={formatUptimePct(successRate)}
+          reference={summary?.reference_fields?.includes('success_rate')}
+          valueClassName={getSuccessRateTextClass(successRate)}
+        />
+      </div>
     </div>
   )
 }

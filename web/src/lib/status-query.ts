@@ -99,6 +99,8 @@ export function mapStatusDataToConfig(
     displayTokenStatEnabled: data.display_token_stat_enabled as
       | boolean
       | undefined,
+    modelSquareReferenceDataEnabled:
+      data.model_square_reference_data_enabled === true,
     currency,
   }
 }

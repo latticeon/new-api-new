@@ -145,6 +145,8 @@ const OPERATIONS_SECTIONS = [
         defaultValues={{
           'perf_metrics_setting.enabled':
             settings['perf_metrics_setting.enabled'] ?? true,
+          'perf_metrics_setting.reference_data_enabled':
+            settings['perf_metrics_setting.reference_data_enabled'] ?? false,
           'perf_metrics_setting.flush_interval':
             settings['perf_metrics_setting.flush_interval'] ?? 5,
           'perf_metrics_setting.bucket_time':
