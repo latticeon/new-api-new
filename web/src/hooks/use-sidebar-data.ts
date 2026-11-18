@@ -37,6 +37,7 @@ import {
   Users,
   Wallet,
   Workflow,
+  ChartNoAxesCombined,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -147,6 +148,11 @@ export function useSidebarData(badges: SidebarBadges = {}): SidebarData {
             title: t('Users'),
             url: '/users',
             icon: Users,
+          },
+          {
+            title: t('User analytics'),
+            url: '/user-analytics',
+            icon: ChartNoAxesCombined,
           },
           {
             title: t('Redemption Codes'),
